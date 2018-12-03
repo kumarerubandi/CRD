@@ -17,7 +17,6 @@ Subprojects:
 * examples - JSON examples of service requests and responses
 * ehr-server - FHIR server that acts as a representation of the FHIR server that an EHR would host
 * operations - (now obsolete) Implementation of the CRD FHIR Operation using [HAPI FHIR](http://hapifhir.io/) - this is since been replaced by a CDS Hooks approach
-* request-generator - [react](https://reactjs.org/) based web UI that can generate basic CRD requests and display the returned CDS Hooks cards
 * resources - java objects to represent the data structures involved in CRD requests and responses
 * server - java application that implements the CDS service in CRD
 * testingClient - small java application that makes a CRD request and logs the response
@@ -29,7 +28,7 @@ The subprojects in this repository are capable of simulating the entire set of i
 
 It is not necessary to run all of the components in this system to work with the RI. Depending on your organization's role, you are likely to use a particular subset of the components.
 
-The RI supports the use of [OAuth 2.0](https://oauth.net/2/) as described in the [FHIR Resource Access](https://cds-hooks.org/specification/1.0/#fhir-resource-access) and [SMART App Authorization Guide](http://docs.smarthealthit.org/authorization/). The management of OAuth tokens is handled by [Keycloak](https://www.keycloak.org/), an open source identity management system. In this system, the `request-generator` will obtain a token from Keycloak that can be used to access the `ehr-server`. The `ehr-server` will contact Keycloak to check the validity of the token. The RI can be set up to operate securely and use OAuth tokens to authorize access, or it may be configured in an open fashion for testing.
+The RI supports the use of [OAuth 2.0](https://oauth.net/2/) as described in the [FHIR Resource Access](https://cds-hooks.org/specification/1.0/#fhir-resource-access) and [SMART App Authorization Guide](http://docs.smarthealthit.org/authorization/). The management of OAuth tokens is handled by [Keycloak](https://www.keycloak.org/), an open source identity management system. In this system, the `Provider App` will obtain a token from Keycloak that can be used to access the `ehr-server`. The `ehr-server` will contact Keycloak to check the validity of the token. The RI can be set up to operate securely and use OAuth tokens to authorize access, or it may be configured in an open fashion for testing.
 
 ### Healthcare Provider Components
 On the left side of the diagram, we have two components that simulate functionality that is provided by an EHR system. The first is `request-generator`. This is a web application that can generate a simple CRD request via CDS Hook. The web application allows a user to enter basic demographic information as well as a code for the requested service/device. Once the request has been submitted, the application will display any cards that have been returned by the CDS Service.
@@ -48,54 +47,10 @@ On the left side of the diagram, we have two components that simulate functional
 
 ## Building, testing and running
 1. Clone the repo
-  * `git clone https://github.com/HL7-DaVinci/CRD.git`
+  * `git clone https://github.com/kumarerubandi/CRD`
 1. Test the code (optional)
   * `gradle clean check`
 1. Build the code
   * `gradle build`
 
-Visit the [server README](server/README.md) to see how to run the server or the [request-generator README](request-generator/README.md) for information on running these subprojects.
-
-## Setting up a KeyCloak instance
-
-If you want to test CRD in a secure fashion using OAuth, you will need to install and configure Keycloak. The following instructions are for configuring Keycloak for all subprojects in the RI:
-
-1. Download and unzip KeyCloak Server from [here](https://www.keycloak.org/downloads.html)
-2. From command line navigate to the directory KeyCloak was downloaded to and then type `unzip keycloak-<Version>.Final.zip` followed by `cd keycloak-<Version>.Final/bin`
-3. Run `./standalone.sh -Djboss.socket.binding.port-offset=100` from command line to start the server.  It should run on port 8180
-4. Navigate to the KeyCloak instance in a browser, it should be at [http://localhost:8180/](http://localhost:8180)
-5. When prompted, create a new administrative username and password.
-6. Create a realm, choose any name.  The realm will be protecting the `ehr-server`.
-	* The realm can be imported by selecting the `import` option on the realm creation screen.  Importing `ehr-server/src/main/resources/ClientFhirServerRealm.json` will set up the clients, but you will still have to make a new user and modify the config files.
-7. Make two clients by navigating to the `Clients` tab
-	* The name given to the clients will be their `client ID`
-	* Make one client public and the other bearer-only with the `Access-type` dropdown.
-	* In the public client, find the `Web Origins` input and add the address of the EHR fhir server.  Alternatively just put `*` in `Web Origins` if running everything locally, this is less secure and should not be done in a production setting.
-	* In the public client, add a redirect URL.  It can generally work fine as the base url of the server such as [http://localhost:8080](http://localhost:8080)
-8. Navigate to the `Roles` tab and make a new role called `user`
-	* Navigate to the `Users` tab and make a new user.  
-	* Give the new user a password in the `credentials` tab
-	* Go to `Role Mappings` and add the `user` role
-9. Modify config files to point at your new clients and realms
-	* Change `ehr-server/src/main/resources/fhirServer.properties` to use the client ID, realm name, and client secret of the bearer only client, then set `use_oauth` to `true` in order to use the security feature.
-		* The bearer only client's secret can be found in the `Credentials` tab
-	* Change `request-generator/src/properties.json` to include the name of the realm and the client ID of the public client
-	
-NOTE: As of right now, the security feature will protect the EHR server in its entirety.  There is no way to choose which endpoints to protect and to what degree.  The security feature will hopefully be able to identify different types of users (e.g `admin` vs `user`) in the future.   
-
-## Preferred Development Environment
-The core CRD team develops with [IntelliJ IDEA](https://www.jetbrains.com/idea/). There are no requirements on using this as a Java IDE for working on the project and any other Java IDE should work fine.
-
-### IntelliJ IDEA Setup
-1. Create new project from existing sources
-2. Choose the CRD folder
-3. Specify that it is a gradle project
-
-### Running the server from the IntelliJ IDEA UI
-1. Select the gradle tool window
-1. Choose CRD --> :server --> Tasks --> application --> bootRun
-
-## Questions and Contributions
-Questions about the project can be asked in the [DaVinci stream on the FHIR Zulip Chat](https://chat.fhir.org/#narrow/stream/128-DaVinci).
-
-This project welcomes Pull Requests. Any issues identified with the RI should be submitted via the [GitHub issue tracker](https://github.com/HL7-DaVinci/CRD/issues).
+Visit the [server README](server/README.md) for more information on running the server.
