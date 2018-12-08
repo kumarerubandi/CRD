@@ -15,7 +15,40 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.ModelAndView;
+import com.google.gson.JsonObject;
+import com.google.gson.*;
+import org.json.JSONObject;
+import org.json.JSONException;
+import org.json.simple.parser.*;
+import com.google.gson.JsonParser;
+import java.io.*;
+import java.net.*;
+import java.util.*;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClientBuilder;
+import javax.ws.rs.core.Response;
+
+
+/*import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;*/
+
+
 
 
 /**
@@ -24,7 +57,7 @@ import org.springframework.web.servlet.ModelAndView;
  * The "Model" parameter can be given attributes which can be referenced in the html
  * Thymeleaf provides the ability to reference and use the attributes.
  */
-@Controller
+@RestController
 public class HomeController {
   static final Logger logger = LoggerFactory.getLogger(HomeController.class);
 
@@ -60,6 +93,19 @@ public class HomeController {
 
     return "data";
   }
+  
+ /* @GetMapping("/coverage_determination")
+  @ResponseBody
+  public Object CoverageDetermination1(Object inputjson) {
+   /* Iterable<CoverageRequirementRule> rules = dataService.findAll();
+    model.addAttribute("rules", rules);
+    List<String> headers = CoverageRequirementRule.getFields();
+    model.addAttribute("headers", headers);
+    model.addAttribute("datum", new CoverageRequirementRule());
+     System.out.println(model);
+   System.out.println(inputjson);
+    return inputjson;
+  }*/
 
   /**
    * Accepts form submissions to create new entries in the database, then redirects to the
@@ -79,6 +125,45 @@ public class HomeController {
     dataService.create(datum);
 
     return new ModelAndView("redirect:data");
+  }
+  
+  @PostMapping("/coverage_determination")
+  public String coverageDetermination(@RequestBody Object inputjson) {
+    
+    
+   // JSONObject obj = new JSONObject();
+    StringBuilder sb = new StringBuilder();
+ try{
+       
+        // execute method and handle any error responses.
+    	URL url = new URL("http://localhost:3000/test");
+        Gson gsonObj = new Gson();
+        String jsonStr = gsonObj.toJson(inputjson);
+        System.out.println(jsonStr);
+        byte[] postDataBytes = jsonStr.getBytes("UTF-8");
+
+        HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("Accept","application/json");
+        conn.setDoOutput(true);
+        conn.getOutputStream().write(postDataBytes);
+        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+        String line =null;
+        while((line=in.readLine())!= null){
+          sb.append(line);
+        }
+       
+        
+    }
+    catch (Exception e) {
+        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
+        e.printStackTrace();
+    }
+    
+  String result = sb.toString();
+  return result;
+
   }
 
   @GetMapping("/public")
