@@ -57,7 +57,7 @@ import org.json.simple.parser.ParseException;*/
  * The "Model" parameter can be given attributes which can be referenced in the html
  * Thymeleaf provides the ability to reference and use the attributes.
  */
-@RestController
+@Controller
 public class HomeController {
   static final Logger logger = LoggerFactory.getLogger(HomeController.class);
 
@@ -128,6 +128,7 @@ public class HomeController {
   }
   
   @PostMapping("/coverage_determination")
+  @ResponseBody
   public String coverageDetermination(@RequestBody Object inputjson) {
     
     
