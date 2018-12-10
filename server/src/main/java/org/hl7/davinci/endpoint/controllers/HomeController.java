@@ -21,9 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.ModelAndView;
 import com.google.gson.JsonObject;
 import com.google.gson.*;
-import org.json.JSONObject;
-import org.json.JSONException;
-import org.json.simple.parser.*;
+// import org.json.simple.parser.*;
 import com.google.gson.JsonParser;
 import java.io.*;
 import java.net.*;
@@ -41,12 +39,10 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
-import javax.ws.rs.core.Response;
+// import javax.ws.rs.core.Response;
 
 
-/*import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;*/
+
 
 
 
