@@ -1,52 +1,51 @@
-allprojects {
-
-    apply plugin: 'idea'
-
-    apply plugin: 'checkstyle'
-    checkstyle {
-        toolVersion "8.11"
+buildscript {
+    ext {
+        springBootVersion = '2.0.3.RELEASE'
     }
-
     repositories {
         mavenCentral()
-        jcenter{ url "http://jcenter.bintray.com/" }
-        maven { url "https://jitpack.io" }
-        jcenter()
+        maven { url 'https://repo.spring.io/snapshot' }
+
     }
-
-
-}
-
-subprojects {
-
-    version = '0.0.1'
-    group = 'org.mitre'
-
-    apply plugin: 'java'
-
     dependencies {
-        compile 'ca.uhn.hapi.fhir:hapi-fhir-base:3.4.0'
-        compile 'ca.uhn.hapi.fhir:hapi-fhir-structures-r4:3.4.0'
-         compile 'org.json:json:20160212'
-                 compile 'javax.ws.rs:javax.ws.rs-api:2.0.1'
-     // Jersey 2.15
-        compile 'org.glassfish.jersey.containers:jersey-container-servlet:2.15'
- 
-        // Servlet 3
-        compile 'javax.servlet:javax.servlet-api:3.1.0'
-    compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.3'
-compile group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1.1'
-        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.1.0'
-        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.1.0'
-        testCompileOnly 'junit:junit:4.12'
-        testRuntimeOnly 'org.junit.vintage:junit-vintage-engine:5.1.0'
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
     }
-
-    test {
-        useJUnitPlatform()
-    }
-
 }
 
+plugins {
+    id 'net.ltgt.apt' version '0.10'
+}
+
+apply plugin: 'war'
+apply plugin: 'java'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
 
 
+
+dependencies {
+
+    compile project(':resources')
+    compile project(':operations')
+
+    compile('org.springframework.boot:spring-boot-starter-actuator')
+    compile('org.springframework.boot:spring-boot-starter-data-jpa')
+    compile('org.springframework.boot:spring-boot-starter-data-rest')
+    compile('org.springframework.boot:spring-boot-starter-thymeleaf')
+    compile('org.springframework.boot:spring-boot-starter-security')
+
+    compile('com.h2database:h2')
+
+    compile("io.jsonwebtoken:jjwt:0.7.0")
+    compile('ca.uhn.hapi.fhir:hapi-fhir-jpaserver-base:3.4.0'){
+            exclude group: 'org.thymeleaf'
+    }
+
+    compile 'javax.servlet:javax.servlet-api:3.1.0'
+
+    compile 'commons-beanutils:commons-beanutils:1.9.3'
+
+    testCompile('org.springframework.boot:spring-boot-starter-test')
+    testCompile "com.github.tomakehurst:wiremock-standalone:2.18.0"
+    testCompile('org.springframework.boot:spring-boot-starter-test')
+}
