@@ -199,7 +199,7 @@ public class HomeController {
 	 	
        
         // execute method and handle any error responses.
-    	URL url = new URL("http://localhost:3000/test");
+    	URL url = new URL("http://54.227.173.76:3000/execute_cql");
         Gson gsonObj = new Gson();
         String jsonStr = gsonObj.toJson(inputjson);
         System.out.println(jsonStr);
