@@ -1,10 +1,28 @@
 package org.hl7.davinci.endpoint.controllers;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
+import org.hl7.davinci.RequestIncompleteException;
 import org.hl7.davinci.endpoint.database.CoverageRequirementRule;
 import org.hl7.davinci.endpoint.database.DataService;
-
-import java.util.List;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,38 +32,23 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
-import org.hl7.davinci.RequestIncompleteException;
-
 import org.springframework.web.servlet.ModelAndView;
+
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.*;
 // import org.json.simple.parser.*;
 import com.google.gson.JsonParser;
-import java.io.*;
-import java.net.*;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.util.EntityUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpHeaders;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.HttpClientBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Arrays;
+import java.util.Map;
+import org.json.JSONObject;
+import org.json.JSONException;
+
 // import javax.ws.rs.core.Response;
 
 
@@ -134,10 +137,32 @@ public class HomeController {
   @RequestMapping(value = "/coverage_determination", method = RequestMethod.POST, 
   consumes = "application/json", produces = "application/json")
   @ResponseBody
-  public String coverageDetermination(@RequestBody Object inputjson,@RequestHeader Map<String,String> headers) {
+  public String coverageDetermination(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers) {
 	  
-//	  System.out.println("------");
-//      System.out.println(inputjson);
+	  System.out.println("------");
+      System.out.println(inputjson);
+      ObjectMapper oMapper = new ObjectMapper();
+      Map<String, Object> context = oMapper.convertValue(inputjson.get("context") , Map.class);
+      Map<String, Object> orders = oMapper.convertValue(context.get("orders") , Map.class);
+
+//      System.out.println(context);
+      
+      JSONObject reqJson = new JSONObject();
+      JSONObject patientFhir = new JSONObject();
+      try {
+    	  patientFhir.put("resourceType","Bundle");
+    	  patientFhir.put("id",context.get("patientId"));
+    	  patientFhir.put("type","collection");
+    	  patientFhir.put("entry",orders.get("entry"));
+    	  reqJson.put("cql","AdultLiverTransplantation");
+    	  reqJson.put("patientFhir",patientFhir);
+    	  System.out.println("reqqjson -----\n");
+    	  System.out.println(reqJson);
+      
+      }
+      catch(JSONException json_ex) {
+    	  System.out.println(json_ex.getStackTrace());
+      }
       CloseableHttpClient client = HttpClients.createDefault();
       // Get the token and drop the "Bearer"
       
@@ -159,9 +184,10 @@ public class HomeController {
         	  password = auth_values[1];
           }
       }
-//      
-//      System.out.println(username);
+
 //      System.out.println(password);
+//      Object[] req_context = inputjson.get;
+      
       String clientId = "app-login";
       HttpPost httpPost = new HttpPost("https://54.227.173.76:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token");
       List<NameValuePair> params = new ArrayList<NameValuePair>();
@@ -181,6 +207,7 @@ public class HomeController {
       try {
         CloseableHttpResponse response = client.execute(httpPost);
         String jsonString = EntityUtils.toString(response.getEntity());
+        
         tokenResponse = new JsonParser().parse(jsonString).getAsJsonObject();
         client.close();
       }
@@ -194,14 +221,15 @@ public class HomeController {
       
     
       StringBuilder sb = new StringBuilder();
+      JSONObject responseObj = new JSONObject();
       try{
 	 
 	 	
-       
+        
         // execute method and handle any error responses.
     	URL url = new URL("http://localhost:3000/execute_cql");
         Gson gsonObj = new Gson();
-        String jsonStr = gsonObj.toJson(inputjson);
+        String jsonStr = gsonObj.toJson(reqJson);
         System.out.println(jsonStr);
         byte[] postDataBytes = jsonStr.getBytes("UTF-8");
 
@@ -223,7 +251,11 @@ public class HomeController {
         while((line=in.readLine())!= null){
           sb.append(line);
         }
-       
+        JSONObject jsonObj = new JSONObject(sb.toString());
+        
+        if(jsonObj.get("Coverage") != null) {
+        	responseObj.put("Coverage", jsonObj.get("Coverage"));
+        }
         
 	    }
 	 catch(RequestIncompleteException req_exception) {
@@ -234,7 +266,7 @@ public class HomeController {
 	        exception.printStackTrace();
 	    }
     
-	 String result = sb.toString();
+	 String result = responseObj.toString();
 	 return result;
 
   }
