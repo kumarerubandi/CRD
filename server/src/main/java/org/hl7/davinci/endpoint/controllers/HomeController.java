@@ -15,9 +15,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.hl7.davinci.RequestIncompleteException;
+
 import org.springframework.web.servlet.ModelAndView;
 import com.google.gson.JsonObject;
 import com.google.gson.*;
@@ -25,6 +29,7 @@ import com.google.gson.*;
 import com.google.gson.JsonParser;
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.NameValuePair;
@@ -34,8 +39,10 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -123,14 +130,73 @@ public class HomeController {
     return new ModelAndView("redirect:data");
   }
   
-  @PostMapping("/coverage_determination")
+//  @PostMapping("/coverage_determination")
+  @RequestMapping(value = "/coverage_determination", method = RequestMethod.POST, 
+  consumes = "application/json", produces = "application/json")
   @ResponseBody
-  public String coverageDetermination(@RequestBody Object inputjson) {
+  public String coverageDetermination(@RequestBody Object inputjson,@RequestHeader Map<String,String> headers) {
+	  
+//	  System.out.println("------");
+//      System.out.println(inputjson);
+      CloseableHttpClient client = HttpClients.createDefault();
+      // Get the token and drop the "Bearer"
+      
+      final String authorization = headers.get("authorization");
+//      System.out.println("httpheaddd");
+//      System.out.println(headers);
+//      System.out.println(headers.get("authorization"));
+      String username = null;
+      String password = null;
+      if (authorization != null && authorization.toLowerCase().startsWith("basic")) {
+          // Authorization: Basic base64credentials
+          String base64Credentials = authorization.substring("Basic".length()).trim();
+          byte[] credDecoded = Base64.getDecoder().decode(base64Credentials);
+          String credentials = new String(credDecoded, StandardCharsets.UTF_8);
+          // credentials = username:password
+          final String[] auth_values = credentials.split(":", 2);
+          if(auth_values.length == 2) {
+        	  username = auth_values[0];
+        	  password = auth_values[1];
+          }
+      }
+//      
+//      System.out.println(username);
+//      System.out.println(password);
+      String clientId = "app-login";
+      HttpPost httpPost = new HttpPost("https://54.227.173.76:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token");
+      List<NameValuePair> params = new ArrayList<NameValuePair>();
+      params.add(new BasicNameValuePair("client_id", clientId));
+      params.add(new BasicNameValuePair("username",username));
+      params.add(new BasicNameValuePair("password", password));
+      params.add(new BasicNameValuePair("grant_type", "password"));
+      try {
+        httpPost.setEntity(new UrlEncodedFormEntity(params));
+      } catch (UnsupportedEncodingException e) {
+        e.printStackTrace();
+      }
+//      System.out.println("introspectUrl::");
+//      System.out.println(introspectUrl);
+      JsonObject tokenResponse;
+      // Map<String,Object> params = new LinkedHashMap<>();
+      try {
+        CloseableHttpResponse response = client.execute(httpPost);
+        String jsonString = EntityUtils.toString(response.getEntity());
+        tokenResponse = new JsonParser().parse(jsonString).getAsJsonObject();
+        client.close();
+      }
+      catch (IOException e) {
+//        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
+        e.printStackTrace();
+        tokenResponse = null;
+      }
+//      System.out.println(tokenResponse);
+//      return  jsonResponse;
+      
     
-    
-   // JSONObject obj = new JSONObject();
-    StringBuilder sb = new StringBuilder();
- try{
+      StringBuilder sb = new StringBuilder();
+      try{
+	 
+	 	
        
         // execute method and handle any error responses.
     	URL url = new URL("http://localhost:3000/test");
@@ -143,6 +209,13 @@ public class HomeController {
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json");
         conn.setRequestProperty("Accept","application/json");
+        if(tokenResponse.get("access_token") != null) {
+        	conn.setRequestProperty("Authorization","Bearer " + tokenResponse.get("access_token").toString().replaceAll("^\"|\"$", ""));
+        }
+        else {
+        	throw new RequestIncompleteException("Unable to call CDS . token doesn't exist");
+        }
+        
         conn.setDoOutput(true);
         conn.getOutputStream().write(postDataBytes);
         BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
@@ -152,14 +225,17 @@ public class HomeController {
         }
        
         
-    }
-    catch (Exception e) {
-        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
-        e.printStackTrace();
-    }
+	    }
+	 catch(RequestIncompleteException req_exception) {
+	 		return req_exception.getMessage();
+	 	}
+	 catch (Exception exception) {
+	        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
+	        exception.printStackTrace();
+	    }
     
-  String result = sb.toString();
-  return result;
+	 String result = sb.toString();
+	 return result;
 
   }
 
