@@ -229,7 +229,7 @@ public class HomeController {
         // execute method and handle any error responses.
     	URL url = new URL("http://localhost:3000/execute_cql");
         Gson gsonObj = new Gson();
-        String jsonStr = gsonObj.toJson(reqJson);
+        String jsonStr = reqJson.toString();
         System.out.println(jsonStr);
         byte[] postDataBytes = jsonStr.getBytes("UTF-8");
 
