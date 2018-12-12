@@ -238,6 +238,86 @@ public class HomeController {
 	 return result;
 
   }
+  
+  @PostMapping("/prior-authorization")
+  @ResponseBody
+  public String priorAuthorization(@RequestBody Object inputjson) {
+    
+    
+   // JSONObject obj = new JSONObject();
+    StringBuilder sb = new StringBuilder();
+ try{
+       
+        // execute method and handle any error responses.
+    	URL url = new URL("http://localhost:3000/test");
+        Gson gsonObj = new Gson();
+        String jsonStr = gsonObj.toJson(inputjson);
+        System.out.println(jsonStr);
+        byte[] postDataBytes = jsonStr.getBytes("UTF-8");
+
+        HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("Accept","application/json");
+        conn.setDoOutput(true);
+        conn.getOutputStream().write(postDataBytes);
+        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+        String line =null;
+        while((line=in.readLine())!= null){
+          sb.append(line);
+        }
+       
+        
+    }
+    catch (Exception e) {
+        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
+        e.printStackTrace();
+    }
+    
+  String result = sb.toString();
+  return result;
+
+  }
+  
+  @PostMapping("/review")
+  @ResponseBody
+  public String review(@RequestBody Object inputjson) {
+    
+    
+   // JSONObject obj = new JSONObject();
+    StringBuilder sb = new StringBuilder();
+ try{
+       
+        // execute method and handle any error responses.
+    	URL url = new URL("http://localhost:3000/test");
+        Gson gsonObj = new Gson();
+        String jsonStr = gsonObj.toJson(inputjson);
+        System.out.println(jsonStr);
+        byte[] postDataBytes = jsonStr.getBytes("UTF-8");
+
+        HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("Accept","application/json");
+        conn.setDoOutput(true);
+        conn.getOutputStream().write(postDataBytes);
+        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+        String line =null;
+        while((line=in.readLine())!= null){
+          sb.append(line);
+        }
+       
+        
+    }
+    catch (Exception e) {
+        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
+        e.printStackTrace();
+    }
+    
+  String result = sb.toString();
+  return result;
+
+  }
 
   @GetMapping("/public")
   public String public_key(Model model) {
