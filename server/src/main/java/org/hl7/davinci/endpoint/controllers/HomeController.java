@@ -189,7 +189,7 @@ public class HomeController {
         e.printStackTrace();
         tokenResponse = null;
       }
-//      System.out.println(tokenResponse);
+     System.out.println(tokenResponse);
 //      return  jsonResponse;
       
     
