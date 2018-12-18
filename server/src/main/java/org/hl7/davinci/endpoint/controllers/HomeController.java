@@ -133,6 +133,9 @@ public class HomeController {
     return new ModelAndView("redirect:data");
   }
   
+  
+  
+  
 //  @PostMapping("/coverage_determination")
   @RequestMapping(value = "/coverage_determination", method = RequestMethod.POST, 
   consumes = "application/json", produces = "application/json")
@@ -229,6 +232,7 @@ public class HomeController {
         // execute method and handle any error responses.
     	URL url = new URL("http://localhost:3000/execute_cql");
         Gson gsonObj = new Gson();
+        reqJson.put("request_type", "decision");
         String jsonStr = reqJson.toString();
         System.out.println(jsonStr);
         byte[] postDataBytes = jsonStr.getBytes("UTF-8");
@@ -270,6 +274,147 @@ public class HomeController {
 	 return result;
 
   }
+  
+  
+  
+  @RequestMapping(value = "/coverage_requirement", method = RequestMethod.POST, 
+		  consumes = "application/json", produces = "application/json")
+  @ResponseBody
+  public String coverageRequirement(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers) {
+	  
+	  System.out.println("------");
+      System.out.println(inputjson);
+      ObjectMapper oMapper = new ObjectMapper();
+      Map<String, Object> context = oMapper.convertValue(inputjson.get("context") , Map.class);
+      Map<String, Object> orders = oMapper.convertValue(context.get("orders") , Map.class);
+
+//		      System.out.println(context);
+      
+      JSONObject reqJson = new JSONObject();
+      JSONObject patientFhir = new JSONObject();
+      try {
+    	  patientFhir.put("resourceType","Bundle");
+    	  patientFhir.put("id",context.get("patientId"));
+    	  patientFhir.put("type","collection");
+    	  patientFhir.put("entry",orders.get("entry"));
+    	  reqJson.put("cql","AdultLiverTransplantation");
+    	  reqJson.put("patientFhir",patientFhir);
+    	  System.out.println("reqqjson -----\n");
+    	  System.out.println(reqJson);
+      
+      }
+      catch(JSONException json_ex) {
+    	  System.out.println(json_ex.getStackTrace());
+      }
+      CloseableHttpClient client = HttpClients.createDefault();
+      // Get the token and drop the "Bearer"
+      
+      final String authorization = headers.get("authorization");
+//		      System.out.println("httpheaddd");
+//		      System.out.println(headers);
+//		      System.out.println(headers.get("authorization"));
+      String username = null;
+      String password = null;
+      if (authorization != null && authorization.toLowerCase().startsWith("basic")) {
+          // Authorization: Basic base64credentials
+          String base64Credentials = authorization.substring("Basic".length()).trim();
+          byte[] credDecoded = Base64.getDecoder().decode(base64Credentials);
+          String credentials = new String(credDecoded, StandardCharsets.UTF_8);
+          // credentials = username:password
+          final String[] auth_values = credentials.split(":", 2);
+          if(auth_values.length == 2) {
+        	  username = auth_values[0];
+        	  password = auth_values[1];
+          }
+      }
+
+//		      System.out.println(password);
+//		      Object[] req_context = inputjson.get;
+      
+      String clientId = "app-login";
+      HttpPost httpPost = new HttpPost("https://54.227.173.76:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token");
+      List<NameValuePair> params = new ArrayList<NameValuePair>();
+      params.add(new BasicNameValuePair("client_id", clientId));
+      params.add(new BasicNameValuePair("username",username));
+      params.add(new BasicNameValuePair("password", password));
+      params.add(new BasicNameValuePair("grant_type", "password"));
+      try {
+        httpPost.setEntity(new UrlEncodedFormEntity(params));
+      } catch (UnsupportedEncodingException e) {
+        e.printStackTrace();
+      }
+//		      System.out.println("introspectUrl::");
+//		      System.out.println(introspectUrl);
+      JsonObject tokenResponse;
+      // Map<String,Object> params = new LinkedHashMap<>();
+      try {
+        CloseableHttpResponse response = client.execute(httpPost);
+        String jsonString = EntityUtils.toString(response.getEntity());
+        
+        tokenResponse = new JsonParser().parse(jsonString).getAsJsonObject();
+        client.close();
+      }
+      catch (IOException e) {
+//		        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
+        e.printStackTrace();
+        tokenResponse = null;
+      }
+     System.out.println(tokenResponse);
+//		      return  jsonResponse;
+      
+    
+      StringBuilder sb = new StringBuilder();
+      JSONObject responseObj = new JSONObject();
+      try{
+	 
+	 	
+        
+        // execute method and handle any error responses.
+    	URL url = new URL("http://localhost:3000/execute_cql");
+        Gson gsonObj = new Gson();
+        reqJson.put("request_type", "requirements");
+        String jsonStr = reqJson.toString();
+        System.out.println(jsonStr);
+        byte[] postDataBytes = jsonStr.getBytes("UTF-8");
+
+        HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("Accept","application/json");
+        if(tokenResponse.get("access_token") != null) {
+        	conn.setRequestProperty("Authorization","Bearer " + tokenResponse.get("access_token").toString().replaceAll("^\"|\"$", ""));
+        }
+        else {
+        	throw new RequestIncompleteException("Unable to call CDS . token doesn't exist");
+        }
+        
+        conn.setDoOutput(true);
+        conn.getOutputStream().write(postDataBytes);
+        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+        String line =null;
+        while((line=in.readLine())!= null){
+          sb.append(line);
+        }
+//        System.out.println("");
+//        System.out.println(sb);
+        JSONObject jsonObj = new JSONObject(sb.toString());
+        
+        return jsonObj.toString();
+        
+	    }
+	 catch(RequestIncompleteException req_exception) {
+	 		return req_exception.getMessage();
+	 	}
+	 catch (Exception exception) {
+	        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
+	        exception.printStackTrace();
+	    }
+    
+	 String result = responseObj.toString();
+	 return result;
+
+  }
+  
   
   @PostMapping("/prior-authorization")
   @ResponseBody
