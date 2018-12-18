@@ -137,10 +137,10 @@ public class HomeController {
   
   
 //  @PostMapping("/coverage_determination")
-  @RequestMapping(value = "/coverage_determination", method = RequestMethod.POST, 
+  @RequestMapping(value = "/coverage_decision", method = RequestMethod.POST, 
   consumes = "application/json", produces = "application/json")
   @ResponseBody
-  public String coverageDetermination(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers) {
+  public String coverageDecision(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers) {
 	  
 	  System.out.println("------");
       System.out.println(inputjson);
@@ -232,7 +232,7 @@ public class HomeController {
         // execute method and handle any error responses.
     	URL url = new URL("http://localhost:3000/execute_cql");
         Gson gsonObj = new Gson();
-        reqJson.put("request_type", "decision");
+        reqJson.put("request_for", "decision");
         String jsonStr = reqJson.toString();
         System.out.println(jsonStr);
         byte[] postDataBytes = jsonStr.getBytes("UTF-8");
@@ -372,7 +372,7 @@ public class HomeController {
         // execute method and handle any error responses.
     	URL url = new URL("http://localhost:3000/execute_cql");
         Gson gsonObj = new Gson();
-        reqJson.put("request_type", "requirements");
+        reqJson.put("request_for", "requirements");
         String jsonStr = reqJson.toString();
         System.out.println(jsonStr);
         byte[] postDataBytes = jsonStr.getBytes("UTF-8");
@@ -398,8 +398,24 @@ public class HomeController {
 //        System.out.println("");
 //        System.out.println(sb);
         JSONObject jsonObj = new JSONObject(sb.toString());
-        
-        return jsonObj.toString();
+        JSONObject cards = new JSONObject();
+        ArrayList<JSONObject> suggestions = new ArrayList<JSONObject>();
+        ArrayList<JSONObject> links = new ArrayList<JSONObject>();
+        JSONObject applink = new JSONObject();
+        applink.put("label","SMART App");
+        applink.put("url","http://localhost:3000/cd");
+        applink.put("type","smart");
+        applink.put("appContext",jsonObj.get("requirements") );
+        links.add(applink);
+        cards.put("links", links);
+        cards.put("suggestions", suggestions);
+        cards.put("summary","List of Requirements");
+        cards.put("indicator","info");
+        cards.put("detail","The requested procedure needs more documentation to process further");
+//        
+//        System.out.println("cards------\n\n\n");
+//        System.out.println(cards);
+        return cards.toString();
         
 	    }
 	 catch(RequestIncompleteException req_exception) {
