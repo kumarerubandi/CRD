@@ -398,24 +398,28 @@ public class HomeController {
 //        System.out.println("");
 //        System.out.println(sb);
         JSONObject jsonObj = new JSONObject(sb.toString());
-        JSONObject cards = new JSONObject();
+        JSONObject singleCard = new JSONObject();
+        JSONObject response = new JSONObject();
         ArrayList<JSONObject> suggestions = new ArrayList<JSONObject>();
         ArrayList<JSONObject> links = new ArrayList<JSONObject>();
+        ArrayList<JSONObject> cards = new ArrayList<JSONObject>();
         JSONObject applink = new JSONObject();
         applink.put("label","SMART App");
         applink.put("url","http://localhost:3000/cd");
         applink.put("type","smart");
         applink.put("appContext",jsonObj.get("requirements") );
         links.add(applink);
-        cards.put("links", links);
-        cards.put("suggestions", suggestions);
-        cards.put("summary","List of Requirements");
-        cards.put("indicator","info");
-        cards.put("detail","The requested procedure needs more documentation to process further");
+        singleCard.put("links", links);
+        singleCard.put("suggestions", suggestions);
+        singleCard.put("summary","List of Requirements");
+        singleCard.put("indicator","info");
+        singleCard.put("detail","The requested procedure needs more documentation to process further");
+        cards.add(singleCard);
+        response.put("cards",cards);
 //        
 //        System.out.println("cards------\n\n\n");
 //        System.out.println(cards);
-        return cards.toString();
+        return response.toString();
         
 	    }
 	 catch(RequestIncompleteException req_exception) {
