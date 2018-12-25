@@ -16,6 +16,7 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
@@ -47,8 +48,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Arrays;
 import java.util.Map;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import org.json.JSONException;
-
+import java.util.LinkedHashMap;
 // import javax.ws.rs.core.Response;
 
 
@@ -133,6 +135,120 @@ public class HomeController {
     return new ModelAndView("redirect:data");
   }
   
+//  public String getToken() {
+//	  
+//	  
+//  }
+  @RequestMapping(value = "/smart_app", method = RequestMethod.POST, 
+		  consumes = "application/json", produces = "application/json")
+  @ResponseBody
+  public String getFromFhir(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers){
+	   
+	
+	   System.out.println("Input Json");
+	   System.out.println(inputjson);
+	   ObjectMapper oMapper = new ObjectMapper();
+	   List<Object> appContext = oMapper.convertValue(inputjson.get("appContext") , List.class);
+	   Map<String, LinkedHashMap> resources = oMapper.convertValue(appContext.get(0) , Map.class);
+	   final String authorization = headers.get("authorization");
+	   CloseableHttpClient httpClient = HttpClients.createDefault();
+	   List<Object> entries =  new ArrayList();
+	   
+	   resources.forEach((key,value) -> {
+	       System.out.println("\n\n\n ------------");
+	//		       System.out.println(value.get("codes").getClass());
+	       List<LinkedHashMap> codes = oMapper.convertValue(value.get("codes") , List.class);
+	       String code = oMapper.convertValue(codes.get(0).get("code") , String.class);
+	       String display = oMapper.convertValue(value.get("display") , String.class);
+	       if(key == "Location") {
+	    	   System.out.println("Locacacacation key ");
+	    	   
+	       }
+	       else {
+		       String urlString = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
+		       
+//		       String urlString = "http://hapi.fhir.org/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
+		       
+		       System.out.println(urlString);
+		       HttpGet httpGet = new HttpGet(urlString);
+		//			   http://hapi.fhir.org/baseDstu3/Condition?patient=415133
+		       System.out.println(authorization);
+		   	   httpGet.addHeader("Authorization",authorization);
+		   	   
+		   	   try {
+		   		   	StringBuffer fhirresponse = new StringBuffer();
+			        CloseableHttpResponse httpResponse = httpClient.execute(httpGet);
+			   		System.out.println("GET Response Status:: "
+			   				+ httpResponse.getStatusLine().getStatusCode());
+			
+			   		BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()));
+			
+			   		String inputLine;
+			   		
+			   		if(httpResponse.getStatusLine().getStatusCode() == 200) {
+			   			while ((inputLine = reader.readLine()) != null) {
+				   			fhirresponse.append(inputLine);
+				   		}
+			   			JSONObject response  = new JSONObject(fhirresponse.toString());
+			   			System.out.println("Resssss");
+			   			System.out.println(response);
+			   			
+			   			int total = (int) response.get("total");
+			   			System.out.println(total);
+			   			if(total != 0) {
+			   				JSONArray entry = new JSONArray(response.get("entry").toString());
+				   			System.out.println("\n\n\n"+response.get("entry").getClass()+":::::::::::::"+response.get("entry"));
+		
+		//		   			List<JSONObject> entry = oMapper.convertValue(response.get("entry"), List.class);;
+				   			
+		//		   			System.out.println("\n\n\n:::::::::::::"+entry);
+		//		   			response.get("entry").getClass();
+				   			
+				   	       
+				   			entry.forEach((element) -> {
+				   				System.out.println("\n\n\n ==========="+element);
+				   				entries.add(element);
+				   				
+				   			});
+			   			}
+			   			
+	//		   			entries.addAll(entry);
+			   		}
+			   		
+	
+			   		System.out.println("fhirresponse");
+			   		System.out.println(fhirresponse.getClass());
+			   		reader.close();
+		   	   }
+			   	catch(Exception ex) {
+		   	    	System.out.println("Exccpepe");
+		   	    	
+		   	    	ex.printStackTrace();
+		   	    }
+	       }
+	       
+	   });
+	   System.out.println("entriii");
+
+			   System.out.println(entries);
+	  
+	  
+	
+		// print result
+		
+		
+		try {
+			httpClient.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+
+	   	 
+	   return entries.toString();
+	   
+  }
   
   
   
@@ -141,6 +257,8 @@ public class HomeController {
   consumes = "application/json", produces = "application/json")
   @ResponseBody
   public String coverageDecision(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers) {
+	    
+	  
 	  
 	  System.out.println("------");
       System.out.println(inputjson);
@@ -222,7 +340,7 @@ public class HomeController {
      System.out.println(tokenResponse);
 //      return  jsonResponse;
       
-    
+  
       StringBuilder sb = new StringBuilder();
       JSONObject responseObj = new JSONObject();
       try{
@@ -407,7 +525,7 @@ public class HomeController {
         applink.put("label","SMART App");
         applink.put("url","http://localhost:3000/cd");
         applink.put("type","smart");
-        applink.put("appContext",jsonObj.get("requirements") );
+        applink.put("appContext",jsonObj.get("requirements"));
         links.add(applink);
         singleCard.put("links", links);
         singleCard.put("suggestions", suggestions);
