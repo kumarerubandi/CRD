@@ -1,7 +1,11 @@
 package org.hl7.davinci.endpoint.controllers;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
@@ -12,6 +16,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -29,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.ResourceUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -165,9 +171,9 @@ public class HomeController {
 	    	   
 	       }
 	       else {
-		       String urlString = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
+//		       String urlString = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
 		       
-//		       String urlString = "http://hapi.fhir.org/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
+		       String urlString = "http://hapi.fhir.org/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
 		       
 		       System.out.println(urlString);
 		       HttpGet httpGet = new HttpGet(urlString);
@@ -259,9 +265,9 @@ public class HomeController {
   public String coverageDecision(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers) {
 	    
 	  
-	  
-	  System.out.println("------");
-      System.out.println(inputjson);
+	  File file;
+//	  System.out.println("------");
+//      System.out.println(inputjson);
       ObjectMapper oMapper = new ObjectMapper();
       Map<String, Object> context = oMapper.convertValue(inputjson.get("context") , Map.class);
       Map<String, Object> orders = oMapper.convertValue(context.get("orders") , Map.class);
@@ -271,22 +277,39 @@ public class HomeController {
       JSONObject reqJson = new JSONObject();
       JSONObject patientFhir = new JSONObject();
       try {
+    	  file = ResourceUtils.getFile("classpath:config/data.json");
+		  InputStream in = new FileInputStream(file);
+		  String jsonTxt = IOUtils.toString(in, StandardCharsets.UTF_8);
+		  JSONObject configData = new JSONObject(jsonTxt);
+		  
+//		  System.out.println("configData:\n"+ configData.get("hook_cql_map"));
+		  String hook  = (String) inputjson.get("hook");
+		  JSONObject hookMap = oMapper.convertValue(configData.get("hook_cql_map") , JSONObject.class);
+//		  System.out.println(hookMap);
+		  List<String> hookList = oMapper.convertValue(hookMap.get(hook) , List.class);
+		  
+		  
     	  patientFhir.put("resourceType","Bundle");
     	  patientFhir.put("id",context.get("patientId"));
     	  patientFhir.put("type","collection");
     	  patientFhir.put("entry",orders.get("entry"));
-    	  reqJson.put("cql","AdultLiverTransplantation");
+    	  reqJson.put("cql",hookList.get(0));
     	  reqJson.put("patientFhir",patientFhir);
-    	  System.out.println("reqqjson -----\n");
-    	  System.out.println(reqJson);
+//    	  System.out.println("reqqjson -----\n");
+//    	  System.out.println(reqJson);
       
       }
       catch(JSONException json_ex) {
     	  System.out.println(json_ex.getStackTrace());
-      }
+      } catch (FileNotFoundException e) {
+		e.printStackTrace();
+	  } catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
       CloseableHttpClient client = HttpClients.createDefault();
       // Get the token and drop the "Bearer"
-      
+  /*//GEtting Token -------------    
       final String authorization = headers.get("authorization");
 //      System.out.println("httpheaddd");
 //      System.out.println(headers);
@@ -324,6 +347,8 @@ public class HomeController {
 //      System.out.println("introspectUrl::");
 //      System.out.println(introspectUrl);
       JsonObject tokenResponse;
+      
+      
       // Map<String,Object> params = new LinkedHashMap<>();
       try {
         CloseableHttpResponse response = client.execute(httpPost);
@@ -338,55 +363,120 @@ public class HomeController {
         tokenResponse = null;
       }
      System.out.println(tokenResponse);
-//      return  jsonResponse;
+     
+     
+     */
+      final String authorization = headers.get("authorization");
+      String token = null;
+      try {
+	       if(authorization != null && authorization.startsWith("Bearer"))
+	       {
+	        token = authorization.substring("Bearer".length()).trim();
+	        System.out.println("token....");
+	        System.out.println(token);
+	          
+	       }
+	       else {
+		       
+	    	   throw new RequestIncompleteException("No valid authorization header was found");	       
+	       }
+      }
+      catch(RequestIncompleteException req_exception) {
+    	  	JSONObject errorObj = new JSONObject();
+    	  	errorObj.put("exception", req_exception.getMessage());
+	 		return errorObj.toString();
+	 	}
+      catch (Exception exception) {
+	        System.out.println("388 EXceptionnnnnn");
+	        exception.printStackTrace();
+	    }
       
-  
+      String client_Id = "app-token";
+      String client_secret = "237b167a-c4d0-4861-856d-6decf5426022";
+      HttpPost httpPost = new HttpPost("https://54.227.173.76:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token/introspect");
+      List<NameValuePair> params = new ArrayList<NameValuePair>();
+      params.add(new BasicNameValuePair("client_id", client_Id));
+      params.add(new BasicNameValuePair("client_secret", client_secret));
+      params.add(new BasicNameValuePair("token", token));
+      try {
+        httpPost.setEntity(new UrlEncodedFormEntity(params));
+      } catch (UnsupportedEncodingException e) {
+        e.printStackTrace();
+      }
+      
+      JsonObject tokenResponse;
+      try {
+        CloseableHttpResponse response = client.execute(httpPost);
+        String jsonStr = EntityUtils.toString(response.getEntity());
+        tokenResponse = new JsonParser().parse(jsonStr).getAsJsonObject();      
+        client.close();
+      }
+      catch (IOException e) {
+        System.out.println("412\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
+        e.printStackTrace();
+        tokenResponse = null;
+      }
+      
+     
       StringBuilder sb = new StringBuilder();
       JSONObject responseObj = new JSONObject();
-      try{
-	 
-	 	
-        
-        // execute method and handle any error responses.
-    	URL url = new URL("http://localhost:3000/execute_cql");
-        Gson gsonObj = new Gson();
-        reqJson.put("request_for", "decision");
-        String jsonStr = reqJson.toString();
-        System.out.println(jsonStr);
-        byte[] postDataBytes = jsonStr.getBytes("UTF-8");
+      System.out.println("Tokeken ress");
 
-        HttpURLConnection conn = (HttpURLConnection)url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("Accept","application/json");
-        if(tokenResponse.get("access_token") != null) {
-        	conn.setRequestProperty("Authorization","Bearer " + tokenResponse.get("access_token").toString().replaceAll("^\"|\"$", ""));
+      System.out.println(tokenResponse);
+      
+      try {
+      	if ((tokenResponse != null) && (tokenResponse.get("active").getAsBoolean())) {
+      	
+      		
+	        // execute method and handle any error responses.
+	    	URL url = new URL("http://localhost:3000/execute_cql");
+	        Gson gsonObj = new Gson();
+	        reqJson.put("request_for", "decision");
+	        String jsonStr = reqJson.toString();
+	        System.out.println(jsonStr);
+	        byte[] postDataBytes = jsonStr.getBytes("UTF-8");
+	
+	        HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+	        conn.setRequestMethod("POST");
+	        conn.setRequestProperty("Content-Type", "application/json");
+	        conn.setRequestProperty("Accept","application/json");
+	        if(authorization!= null) {
+	        	conn.setRequestProperty("Authorization",authorization);
+	          
+	        }
+	        else {
+	        	throw new RequestIncompleteException("Unable to call CDS . token doesn't exist");
+	        }
+	        
+	        conn.setDoOutput(true);
+	        conn.getOutputStream().write(postDataBytes);
+	        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+	        String line =null;
+	        while((line=in.readLine())!= null){
+	          sb.append(line);
+	        }
+	        JSONObject jsonObj = new JSONObject(sb.toString());
+	        
+	        if(jsonObj.get("Coverage") != null) {
+	        	responseObj.put("Coverage", jsonObj.get("Coverage"));
+	        }
+	        
+		 }
+      	else {
+      		
+        	throw new RequestIncompleteException("Invalid Oauth Token");
         }
-        else {
-        	throw new RequestIncompleteException("Unable to call CDS . token doesn't exist");
-        }
-        
-        conn.setDoOutput(true);
-        conn.getOutputStream().write(postDataBytes);
-        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-        String line =null;
-        while((line=in.readLine())!= null){
-          sb.append(line);
-        }
-        JSONObject jsonObj = new JSONObject(sb.toString());
-        
-        if(jsonObj.get("Coverage") != null) {
-        	responseObj.put("Coverage", jsonObj.get("Coverage"));
-        }
-        
-	    }
+       }
 	 catch(RequestIncompleteException req_exception) {
-	 		return req_exception.getMessage();
+		 	JSONObject errorObj = new JSONObject();
+ 	  		errorObj.put("exception", req_exception.getMessage());
+	 		return errorObj.toString();
 	 	}
 	 catch (Exception exception) {
 	        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
 	        exception.printStackTrace();
 	    }
+      
     
 	 String result = responseObj.toString();
 	 return result;
@@ -403,6 +493,7 @@ public class HomeController {
 	  System.out.println("------");
       System.out.println(inputjson);
       ObjectMapper oMapper = new ObjectMapper();
+      File file;
       Map<String, Object> context = oMapper.convertValue(inputjson.get("context") , Map.class);
       Map<String, Object> orders = oMapper.convertValue(context.get("orders") , Map.class);
 
@@ -411,144 +502,157 @@ public class HomeController {
       JSONObject reqJson = new JSONObject();
       JSONObject patientFhir = new JSONObject();
       try {
+    	  file = ResourceUtils.getFile("classpath:config/data.json");
+		  InputStream in = new FileInputStream(file);
+		  String jsonTxt = IOUtils.toString(in, StandardCharsets.UTF_8);
+		  JSONObject configData = new JSONObject(jsonTxt);
+		  
+//		  System.out.println("configData:\n"+ configData.get("hook_cql_map"));
+		  String hook  = (String) inputjson.get("hook");
+		  JSONObject hookMap = oMapper.convertValue(configData.get("hook_cql_map") , JSONObject.class);
+//		  System.out.println(hookMap);
+		  List<String> hookList = oMapper.convertValue(hookMap.get(hook) , List.class);
     	  patientFhir.put("resourceType","Bundle");
     	  patientFhir.put("id",context.get("patientId"));
     	  patientFhir.put("type","collection");
     	  patientFhir.put("entry",orders.get("entry"));
-    	  reqJson.put("cql","AdultLiverTransplantation");
+    	  reqJson.put("cql",hookList.get(0));
     	  reqJson.put("patientFhir",patientFhir);
-    	  System.out.println("reqqjson -----\n");
+    	  System.out.println("reqquirejson -----\n");
     	  System.out.println(reqJson);
       
       }
       catch(JSONException json_ex) {
     	  System.out.println(json_ex.getStackTrace());
-      }
+      } 
+      catch (FileNotFoundException e) {
+		e.printStackTrace();
+	  } 
+      catch (IOException e) {
+		e.printStackTrace();
+	  }
       CloseableHttpClient client = HttpClients.createDefault();
       // Get the token and drop the "Bearer"
-      
       final String authorization = headers.get("authorization");
-//		      System.out.println("httpheaddd");
-//		      System.out.println(headers);
-//		      System.out.println(headers.get("authorization"));
-      String username = null;
-      String password = null;
-      if (authorization != null && authorization.toLowerCase().startsWith("basic")) {
-          // Authorization: Basic base64credentials
-          String base64Credentials = authorization.substring("Basic".length()).trim();
-          byte[] credDecoded = Base64.getDecoder().decode(base64Credentials);
-          String credentials = new String(credDecoded, StandardCharsets.UTF_8);
-          // credentials = username:password
-          final String[] auth_values = credentials.split(":", 2);
-          if(auth_values.length == 2) {
-        	  username = auth_values[0];
-        	  password = auth_values[1];
-          }
+      String token = null;
+      try {
+	       if(authorization != null && authorization.startsWith("Bearer"))
+	       {
+	        token = authorization.substring("Bearer".length()).trim();
+	        System.out.println("token....");
+	        System.out.println(token);
+	          
+	       }
+	       else {
+		       
+	    	   throw new RequestIncompleteException("No valid authorization header was found");	       
+	       }
       }
-
-//		      System.out.println(password);
-//		      Object[] req_context = inputjson.get;
+      catch(RequestIncompleteException req_exception) {
+    	  	JSONObject errorObj = new JSONObject();
+    	  	errorObj.put("exception", req_exception.getMessage());
+	 		return errorObj.toString();
+	 	}
+      catch (Exception exception) {
+	        System.out.println("388 EXceptionnnnnn");
+	        exception.printStackTrace();
+	    }
       
-      String clientId = "app-login";
-      HttpPost httpPost = new HttpPost("https://54.227.173.76:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token");
+      String client_Id = "app-token";
+      String client_secret = "237b167a-c4d0-4861-856d-6decf5426022";
+      HttpPost httpPost = new HttpPost("https://54.227.173.76:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token/introspect");
       List<NameValuePair> params = new ArrayList<NameValuePair>();
-      params.add(new BasicNameValuePair("client_id", clientId));
-      params.add(new BasicNameValuePair("username",username));
-      params.add(new BasicNameValuePair("password", password));
-      params.add(new BasicNameValuePair("grant_type", "password"));
+      params.add(new BasicNameValuePair("client_id", client_Id));
+      params.add(new BasicNameValuePair("client_secret", client_secret));
+      params.add(new BasicNameValuePair("token", token));
       try {
         httpPost.setEntity(new UrlEncodedFormEntity(params));
       } catch (UnsupportedEncodingException e) {
         e.printStackTrace();
       }
-//		      System.out.println("introspectUrl::");
-//		      System.out.println(introspectUrl);
+      
       JsonObject tokenResponse;
-      // Map<String,Object> params = new LinkedHashMap<>();
       try {
         CloseableHttpResponse response = client.execute(httpPost);
-        String jsonString = EntityUtils.toString(response.getEntity());
-        
-        tokenResponse = new JsonParser().parse(jsonString).getAsJsonObject();
+        String jsonStr = EntityUtils.toString(response.getEntity());
+        tokenResponse = new JsonParser().parse(jsonStr).getAsJsonObject();      
         client.close();
       }
       catch (IOException e) {
-//		        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
+        System.out.println("412\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
         e.printStackTrace();
         tokenResponse = null;
       }
-     System.out.println(tokenResponse);
-//		      return  jsonResponse;
+      
       
     
       StringBuilder sb = new StringBuilder();
-      JSONObject responseObj = new JSONObject();
+      JSONObject response = new JSONObject();
       try{
 	 
-	 	
+    	if ((tokenResponse != null) && (tokenResponse.get("active").getAsBoolean())) {
+    	      	
         
-        // execute method and handle any error responses.
-    	URL url = new URL("http://localhost:3000/execute_cql");
-        Gson gsonObj = new Gson();
-        reqJson.put("request_for", "requirements");
-        String jsonStr = reqJson.toString();
-        System.out.println(jsonStr);
-        byte[] postDataBytes = jsonStr.getBytes("UTF-8");
-
-        HttpURLConnection conn = (HttpURLConnection)url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("Accept","application/json");
-        if(tokenResponse.get("access_token") != null) {
-        	conn.setRequestProperty("Authorization","Bearer " + tokenResponse.get("access_token").toString().replaceAll("^\"|\"$", ""));
-        }
-        else {
-        	throw new RequestIncompleteException("Unable to call CDS . token doesn't exist");
-        }
-        
-        conn.setDoOutput(true);
-        conn.getOutputStream().write(postDataBytes);
-        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-        String line =null;
-        while((line=in.readLine())!= null){
-          sb.append(line);
-        }
-//        System.out.println("");
-//        System.out.println(sb);
-        JSONObject jsonObj = new JSONObject(sb.toString());
-        JSONObject singleCard = new JSONObject();
-        JSONObject response = new JSONObject();
-        ArrayList<JSONObject> suggestions = new ArrayList<JSONObject>();
-        ArrayList<JSONObject> links = new ArrayList<JSONObject>();
-        ArrayList<JSONObject> cards = new ArrayList<JSONObject>();
-        JSONObject applink = new JSONObject();
-        applink.put("label","SMART App");
-        applink.put("url","http://localhost:3000/cd");
-        applink.put("type","smart");
-        applink.put("appContext",jsonObj.get("requirements"));
-        links.add(applink);
-        singleCard.put("links", links);
-        singleCard.put("suggestions", suggestions);
-        singleCard.put("summary","List of Requirements");
-        singleCard.put("indicator","info");
-        singleCard.put("detail","The requested procedure needs more documentation to process further");
-        cards.add(singleCard);
-        response.put("cards",cards);
-//        
-//        System.out.println("cards------\n\n\n");
-//        System.out.println(cards);
-        return response.toString();
-        
-	    }
+	        // execute method and handle any error responses.
+	    	URL url = new URL("http://localhost:3000/execute_cql");
+	        Gson gsonObj = new Gson();
+	        reqJson.put("request_for", "requirements");
+	        String jsonStr = reqJson.toString();
+	        System.out.println(jsonStr);
+	        byte[] postDataBytes = jsonStr.getBytes("UTF-8");
+	
+	        HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+	        conn.setRequestMethod("POST");
+	        conn.setRequestProperty("Content-Type", "application/json");
+	        conn.setRequestProperty("Accept","application/json");
+	        conn.setRequestProperty("Authorization",authorization);
+	        conn.setDoOutput(true);
+	        conn.getOutputStream().write(postDataBytes);
+	        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+	        String line =null;
+	        while((line=in.readLine())!= null){
+	          sb.append(line);
+	        }
+	//        System.out.println("");
+	//        System.out.println(sb);
+	        JSONObject jsonObj = new JSONObject(sb.toString());
+	        JSONObject singleCard = new JSONObject();
+	        
+	        ArrayList<JSONObject> suggestions = new ArrayList<JSONObject>();
+	        ArrayList<JSONObject> links = new ArrayList<JSONObject>();
+	        ArrayList<JSONObject> cards = new ArrayList<JSONObject>();
+	        JSONObject applink = new JSONObject();
+	        applink.put("label","SMART App");
+	        applink.put("url","http://localhost:3000/cd");
+	        applink.put("type","smart");
+	        applink.put("appContext",jsonObj.get("requirements"));
+	        links.add(applink);
+	        singleCard.put("links", links);
+	        singleCard.put("suggestions", suggestions);
+	        singleCard.put("summary","List of Requirements");
+	        singleCard.put("indicator","info");
+	        singleCard.put("detail","The requested procedure needs more documentation to process further");
+	        cards.add(singleCard);
+	        response.put("cards",cards);
+	//        
+	//        System.out.println("cards------\n\n\n");
+	//        System.out.println(cards);
+    	   }
+    	else {
+           throw new RequestIncompleteException("Invalid Oauth Token");
+    	}
+	  }
 	 catch(RequestIncompleteException req_exception) {
-	 		return req_exception.getMessage();
+		  JSONObject errorObj = new JSONObject();
+	  	  errorObj.put("exception", req_exception.getMessage());
+	 	  return errorObj.toString();
 	 	}
 	 catch (Exception exception) {
 	        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
 	        exception.printStackTrace();
 	    }
     
-	 String result = responseObj.toString();
+	 String result = response.toString();
 	 return result;
 
   }
