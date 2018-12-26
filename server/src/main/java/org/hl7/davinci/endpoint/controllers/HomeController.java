@@ -171,9 +171,9 @@ public class HomeController {
 	    	   
 	       }
 	       else {
-//		       String urlString = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
+		       String urlString = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
 		       
-		       String urlString = "http://hapi.fhir.org/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
+//		       String urlString = "http://hapi.fhir.org/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
 		       
 		       System.out.println(urlString);
 		       HttpGet httpGet = new HttpGet(urlString);
