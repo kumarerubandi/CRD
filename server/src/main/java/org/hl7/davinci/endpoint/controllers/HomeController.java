@@ -657,44 +657,118 @@ public class HomeController {
 
   }
   
-  
-  @PostMapping("/prior-authorization")
+  @RequestMapping(value = "/prior_authorization", method = RequestMethod.POST, 
+		  consumes = "application/json", produces = "application/json")
   @ResponseBody
-  public String priorAuthorization(@RequestBody Object inputjson) {
-    
-    
-   // JSONObject obj = new JSONObject();
-    StringBuilder sb = new StringBuilder();
- try{
-       
-        // execute method and handle any error responses.
-    	URL url = new URL("http://localhost:3000/test");
-        Gson gsonObj = new Gson();
-        String jsonStr = gsonObj.toJson(inputjson);
-        System.out.println(jsonStr);
-        byte[] postDataBytes = jsonStr.getBytes("UTF-8");
+  public String priorAuthorization(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers) {
 
-        HttpURLConnection conn = (HttpURLConnection)url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("Accept","application/json");
-        conn.setDoOutput(true);
-        conn.getOutputStream().write(postDataBytes);
-        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-        String line =null;
-        while((line=in.readLine())!= null){
-          sb.append(line);
-        }
+   // JSONObject obj = new JSONObject();
+	  	StringBuilder sb = new StringBuilder();
+	    File file;
+	    JSONObject response = new JSONObject();
+	    response.put("PriorAuthorization", false);
+	    
+	    /*
+	    CloseableHttpClient client = HttpClients.createDefault();
+	      // Get the token and drop the "Bearer"
+	      final String authorization = headers.get("authorization");
+	      String token = null;
+	      try {
+		       if(authorization != null && authorization.startsWith("Bearer"))
+		       {
+		        token = authorization.substring("Bearer".length()).trim();
+		        System.out.println("token....");
+		        System.out.println(token);
+		          
+		       }
+		       else {
+			       
+		    	   throw new RequestIncompleteException("No valid authorization header was found");	       
+		       }
+	      }
+	      catch(RequestIncompleteException req_exception) {
+	    	  	JSONObject errorObj = new JSONObject();
+	    	  	errorObj.put("exception", req_exception.getMessage());
+		 		return errorObj.toString();
+		 	}
+	      catch (Exception exception) {
+		        System.out.println("388 EXceptionnnnnn");
+		        exception.printStackTrace();
+		    }
+	      
+	      String client_Id = "app-token";
+	      String client_secret = "237b167a-c4d0-4861-856d-6decf5426022";
+	      HttpPost httpPost = new HttpPost("https://54.227.173.76:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token/introspect");
+	      List<NameValuePair> params = new ArrayList<NameValuePair>();
+	      params.add(new BasicNameValuePair("client_id", client_Id));
+	      params.add(new BasicNameValuePair("client_secret", client_secret));
+	      params.add(new BasicNameValuePair("token", token));
+	      try {
+	        httpPost.setEntity(new UrlEncodedFormEntity(params));
+	      } catch (UnsupportedEncodingException e) {
+	        e.printStackTrace();
+	      }
+	      
+	      JsonObject tokenResponse;
+	      try {
+	        CloseableHttpResponse tokenResponceObj = client.execute(httpPost);
+	        String jsonStr = EntityUtils.toString(tokenResponceObj.getEntity());
+	        tokenResponse = new JsonParser().parse(jsonStr).getAsJsonObject();      
+	        client.close();
+	      }
+	      catch (IOException e) {
+	        System.out.println("412\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
+	        e.printStackTrace();
+	        tokenResponse = null;
+	      }
+	      */
+		try {
+			//if ((tokenResponse != null) && (tokenResponse.get("active").getAsBoolean())) {
+				file = ResourceUtils.getFile("classpath:config/data.json");
+				InputStream in = new FileInputStream(file);
+				String jsonTxt = IOUtils.toString(in, StandardCharsets.UTF_8);
+				JSONObject configData = new JSONObject(jsonTxt);
+				ObjectMapper oMapper = new ObjectMapper();
+				List<String> allowedResources = oMapper.convertValue(configData.get("PriorAuthorizationResources") , List.class);
+				Map<String, Object> context = oMapper.convertValue(inputjson.get("context") , Map.class);
+			    Map<String, Object> orders = oMapper.convertValue(context.get("orders") , Map.class);
+			    List<LinkedHashMap> entries = oMapper.convertValue(orders.get("entry") , List.class);
+			    entries.forEach((obj) -> {
+					  System.out.println("\nresource:"+obj.get("resource").getClass());
+
+					  LinkedHashMap jsonEntry = oMapper.convertValue(obj.get("resource") , LinkedHashMap.class);
+				      String resType =(String)  jsonEntry.get("resourceType");
+				      if(allowedResources.contains(resType)) {
+				    	  response.put("PriorAuthorization", true);
+				    	  
+				      }
+			    });
+//			}
+//			else {
+//		       throw new RequestIncompleteException("Invalid Oauth Token");
+//		    }
+			
+		   
+		    
+		}
+		catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		 catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+//		catch(RequestIncompleteException req_exception) {
+//		  JSONObject errorObj = new JSONObject();
+//	  	  errorObj.put("exception", req_exception.getMessage());
+//	 	  return errorObj.toString();
+//	 	}
+		  
        
+		return response.toString();
         
-    }
-    catch (Exception e) {
-        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
-        e.printStackTrace();
-    }
-    
-  String result = sb.toString();
-  return result;
+
 
   }
   

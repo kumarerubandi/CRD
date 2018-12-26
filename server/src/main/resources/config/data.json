@@ -2,5 +2,6 @@
 	"hook_cql_map":{
 		"order-review":["HomeOxygenTherapy"],
 	    "liver-transplant":["AdultLiverTransplantation"]
-	}
+	},
+	"PriorAuthorizationResources":["DeviceRequest"]
 }
