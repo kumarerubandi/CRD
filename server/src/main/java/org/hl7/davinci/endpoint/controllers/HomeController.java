@@ -181,12 +181,13 @@ public class HomeController {
 					JSONObject keyObj = oMapper.convertValue(fieldMapper.get(key) , JSONObject.class);
 					if((boolean) keyObj.get("has_patient_field")) {
 						System.out.println("Has patient field : "+key);
-						
-						
+						finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?"+(String)keyObj.get("code_field")+"="+code+"&patient="+inputjson.get("patientId");
+					    	
 					}
 					else {
 						System.out.println("No patient fields : "+key);
 						System.out.println("field_common_with_patient : "+keyObj.get("field_common_with_patient"));
+						JSONObject patientObj= new JSONObject();
 						if(recievedPatientData == false) {
 
 						    String urlString = "http://54.227.173.76:8181/fhir/baseDstu3/Patient/"+inputjson.get("patientId");
@@ -213,18 +214,8 @@ public class HomeController {
 					   			while ((inputLine = reader.readLine()) != null) {
 						   			fhirresponse.append(inputLine);
 						   		}
-					   			JSONObject patientObj  = new JSONObject(fhirresponse.toString());
-					   			System.out.println("P:attt");
-					   			System.out.println(patientObj);
-					   			JSONObject mappingFieldObj = oMapper.convertValue(patientObj.get((String) keyObj.get("field_common_with_patient")) , JSONObject.class);
-					   			String mappingField = (String) mappingFieldObj.get("reference");
-					   			System.out.println("mappingField Id");
-					   			System.out.println(mappingField);
-					   			String fieldId = mappingField.substring(((String)  keyObj.get("string")+"/").length()).trim();
-					   			System.out.println("Field Id");
-					   			System.out.println(fieldId);
-					   			finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?"+(String)keyObj.get("code_field")+"="+code+"&"+(String) keyObj.get("key")+"="+fieldId;
-							       
+					   			patientObj  = new JSONObject(fhirresponse.toString());
+					   			
 						       
 					   			
 			//		   			entries.addAll(entry);
@@ -239,6 +230,17 @@ public class HomeController {
 					
 					   		recievedPatientData = true;
 						}
+						System.out.println("P:attt");
+			   			System.out.println(patientObj);
+			   			JSONObject mappingFieldObj = oMapper.convertValue(patientObj.get((String) keyObj.get("field_common_with_patient")) , JSONObject.class);
+			   			String mappingField = (String) mappingFieldObj.get("reference");
+			   			System.out.println("mappingField Id");
+			   			System.out.println(mappingField);
+			   			String fieldId = mappingField.substring(((String)  keyObj.get("string")+"/").length()).trim();
+			   			System.out.println("Field Id");
+			   			System.out.println(fieldId);
+			   			finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?"+(String)keyObj.get("code_field")+"="+code+"&"+(String) keyObj.get("key")+"="+fieldId;
+					       
 						
 					}
 				}
