@@ -160,78 +160,156 @@ public class HomeController {
 	   CloseableHttpClient httpClient = HttpClients.createDefault();
 	   List<Object> entries =  new ArrayList();
 	   
+	   String ResourceField = null;
 	   resources.forEach((key,value) -> {
 	       System.out.println("\n\n\n ------------");
 	//		       System.out.println(value.get("codes").getClass());
 	       List<LinkedHashMap> codes = oMapper.convertValue(value.get("codes") , List.class);
 	       String code = oMapper.convertValue(codes.get(0).get("code") , String.class);
 	       String display = oMapper.convertValue(value.get("display") , String.class);
-	       if(key == "Location") {
-	    	   System.out.println("Locacacacation key ");
-	    	   
-	       }
-	       else {
-		       String urlString = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
-		       
-//		       String urlString = "http://hapi.fhir.org/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
-		       
-		       System.out.println(urlString);
-		       HttpGet httpGet = new HttpGet(urlString);
+	       boolean recievedPatientData = false;
+	       JSONObject patientData = new JSONObject();
+	       File file;
+			try {
+				file = ResourceUtils.getFile("classpath:config/data.json");
+				InputStream in = new FileInputStream(file);
+				String jsonTxt = IOUtils.toString(in, StandardCharsets.UTF_8);
+				JSONObject configData = new JSONObject(jsonTxt);
+				JSONObject fieldMapper = oMapper.convertValue(configData.get("fhir_field_mapper") , JSONObject.class);
+				String finalUrl = "";
+				if(fieldMapper.has(key)) {
+					JSONObject keyObj = oMapper.convertValue(fieldMapper.get(key) , JSONObject.class);
+					if((boolean) keyObj.get("has_patient_field")) {
+						System.out.println("Has patient field : "+key);
+						
+						
+					}
+					else {
+						System.out.println("No patient fields : "+key);
+						System.out.println("field_common_with_patient : "+keyObj.get("field_common_with_patient"));
+						if(recievedPatientData == false) {
+
+						    String urlString = "http://54.227.173.76:8181/fhir/baseDstu3/Patient/"+inputjson.get("patientId");
+						       
+//						       String urlString = "http://hapi.fhir.org/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
+						       
+						    System.out.println(urlString);
+						    HttpGet httpGet = new HttpGet(urlString);
+						//			   http://hapi.fhir.org/baseDstu3/Condition?patient=415133
+						    System.out.println(authorization);
+						   	httpGet.addHeader("Authorization",authorization);
+						   	   
+						   	   
+				   		   	StringBuffer fhirresponse = new StringBuffer();
+					        CloseableHttpResponse httpResponse = httpClient.execute(httpGet);
+					   		System.out.println("GET Response Status:: "
+					   				+ httpResponse.getStatusLine().getStatusCode());
+					
+					   		BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()));
+					
+					   		String inputLine;
+					   		
+					   		if(httpResponse.getStatusLine().getStatusCode() == 200) {
+					   			while ((inputLine = reader.readLine()) != null) {
+						   			fhirresponse.append(inputLine);
+						   		}
+					   			JSONObject patientObj  = new JSONObject(fhirresponse.toString());
+					   			System.out.println("P:attt");
+					   			System.out.println(patientObj);
+					   			JSONObject mappingFieldObj = oMapper.convertValue(patientObj.get((String) keyObj.get("field_common_with_patient")) , JSONObject.class);
+					   			String mappingField = (String) mappingFieldObj.get("reference");
+					   			System.out.println("mappingField Id");
+					   			System.out.println(mappingField);
+					   			String fieldId = mappingField.substring(((String)  keyObj.get("string")+"/").length()).trim();
+					   			System.out.println("Field Id");
+					   			System.out.println(fieldId);
+					   			finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?"+(String)keyObj.get("code_field")+"="+code+"&"+(String) keyObj.get("key")+"="+fieldId;
+							       
+						       
+					   			
+			//		   			entries.addAll(entry);
+					   		}else if(httpResponse.getStatusLine().getStatusCode() == 403) {
+					   			System.out.println("Access Denied");
+					   		}
+					   		
+			
+					   		System.out.println("fhirresponse");
+					   		System.out.println(fhirresponse);
+					   		reader.close();
+					
+					   		recievedPatientData = true;
+						}
+						
+					}
+				}
+				else {
+				       finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
+				} 
+//				       String urlString = "http://hapi.fhir.org/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
+				System.out.println("Finalalala");
+		        System.out.println(finalUrl);
+		        HttpGet httpGet = new HttpGet(finalUrl);
 		//			   http://hapi.fhir.org/baseDstu3/Condition?patient=415133
-		       System.out.println(authorization);
-		   	   httpGet.addHeader("Authorization",authorization);
+		        System.out.println(authorization);
+		   	    httpGet.addHeader("Authorization",authorization);
 		   	   
-		   	   try {
-		   		   	StringBuffer fhirresponse = new StringBuffer();
-			        CloseableHttpResponse httpResponse = httpClient.execute(httpGet);
-			   		System.out.println("GET Response Status:: "
-			   				+ httpResponse.getStatusLine().getStatusCode());
-			
-			   		BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()));
-			
-			   		String inputLine;
-			   		
-			   		if(httpResponse.getStatusLine().getStatusCode() == 200) {
-			   			while ((inputLine = reader.readLine()) != null) {
-				   			fhirresponse.append(inputLine);
-				   		}
-			   			JSONObject response  = new JSONObject(fhirresponse.toString());
-			   			System.out.println("Resssss");
-			   			System.out.println(response);
-			   			
-			   			int total = (int) response.get("total");
-			   			System.out.println(total);
-			   			if(total != 0) {
-			   				JSONArray entry = new JSONArray(response.get("entry").toString());
-				   			System.out.println("\n\n\n"+response.get("entry").getClass()+":::::::::::::"+response.get("entry"));
+		   	   
+	   		   	StringBuffer fhirresponse = new StringBuffer();
+		        CloseableHttpResponse httpResponse = httpClient.execute(httpGet);
+		   		System.out.println("GET Response Status:: "
+		   				+ httpResponse.getStatusLine().getStatusCode());
 		
-		//		   			List<JSONObject> entry = oMapper.convertValue(response.get("entry"), List.class);;
-				   			
-		//		   			System.out.println("\n\n\n:::::::::::::"+entry);
-		//		   			response.get("entry").getClass();
-				   			
-				   	       
-				   			entry.forEach((element) -> {
-				   				System.out.println("\n\n\n ==========="+element);
-				   				entries.add(element);
-				   				
-				   			});
-			   			}
-			   			
-	//		   			entries.addAll(entry);
+		   		BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()));
+		
+		   		String inputLine;
+		   		
+		   		if(httpResponse.getStatusLine().getStatusCode() == 200) {
+		   			while ((inputLine = reader.readLine()) != null) {
+			   			fhirresponse.append(inputLine);
 			   		}
-			   		
+		   			JSONObject response  = new JSONObject(fhirresponse.toString());
+		   			System.out.println("Resssss");
+		   			System.out.println(response);
+		   			
+		   			int total = (int) response.get("total");
+		   			System.out.println(total);
+		   			if(total != 0) {
+		   				JSONArray entry = new JSONArray(response.get("entry").toString());
+			   			System.out.println("\n\n\n"+response.get("entry").getClass()+":::::::::::::"+response.get("entry"));
 	
-			   		System.out.println("fhirresponse");
-			   		System.out.println(fhirresponse.getClass());
-			   		reader.close();
-		   	   }
-			   	catch(Exception ex) {
-		   	    	System.out.println("Exccpepe");
-		   	    	
-		   	    	ex.printStackTrace();
-		   	    }
-	       }
+	//		   			List<JSONObject> entry = oMapper.convertValue(response.get("entry"), List.class);;
+			   			
+	//		   			System.out.println("\n\n\n:::::::::::::"+entry);
+	//		   			response.get("entry").getClass();
+			   			
+			   	       
+			   			entry.forEach((element) -> {
+			   				System.out.println("\n\n\n ==========="+element);
+			   				entries.add(element);
+			   				
+			   			});
+		   			}
+		   			
+//		   			entries.addAll(entry);
+		   		}
+		   		
+
+		   		System.out.println("fhirresponse");
+		   		System.out.println(fhirresponse.getClass());
+		   		reader.close();
+	   	   
+	       
+
+		       
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		
+	       
 	       
 	   });
 	   System.out.println("entriii");

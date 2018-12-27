@@ -3,5 +3,18 @@
 		"order-review":["HomeOxygenTherapy"],
 	    "liver-transplant":["AdultLiverTransplantation"]
 	},
-	"PriorAuthorizationResources":["DeviceRequest"]
+	"PriorAuthorizationResources":["DeviceRequest"],
+	"fhir_field_mapper":{
+		"Location":{
+			"code_field":"type",
+			"has_patient_field":false,
+			"field_common_with_patient":"managingOrganization",
+			"string":"Organization",
+			"key":"organization",
+		},
+		"EpisodeOfCare":{
+			"code_field":"type",
+			"has_patient_field":true
+		}
+	}
 }
