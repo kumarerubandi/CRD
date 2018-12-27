@@ -737,6 +737,143 @@ public class HomeController {
 
   }
   
+  @RequestMapping(value = "/prefetch", method = RequestMethod.POST, 
+		  consumes = "application/json", produces = "application/json")
+  @ResponseBody
+  public String prefetch(@RequestBody Map<String, String> inputjson,@RequestHeader Map<String,String> headers) {
+
+   // JSONObject obj = new JSONObject();
+	  	StringBuilder sb = new StringBuilder();
+	    File file;
+	    JSONObject response = new JSONObject();
+	    
+	    
+	    CloseableHttpClient client = HttpClients.createDefault();
+	      // Get the token and drop the "Bearer"
+	    final String authorization = headers.get("authorization");
+	    String token = null;
+	    try {
+	       if(authorization != null && authorization.startsWith("Bearer"))
+	       {
+	        token = authorization.substring("Bearer".length()).trim();
+	        System.out.println("token....");
+	        System.out.println(token);
+	          
+	       }
+	       else {
+		       
+	    	   throw new RequestIncompleteException("No valid authorization header was found");	       
+	       }
+	    }
+	    catch(RequestIncompleteException req_exception) {
+    	  	JSONObject errorObj = new JSONObject();
+    	  	errorObj.put("exception", req_exception.getMessage());
+	 		return errorObj.toString();
+	 	}
+	    catch (Exception exception) {
+	        System.out.println("388 EXceptionnnnnn");
+	        exception.printStackTrace();
+	    }
+	      
+	    String client_Id = "app-token";
+	    String client_secret = "237b167a-c4d0-4861-856d-6decf5426022";
+	    HttpPost httpPost = new HttpPost("https://54.227.173.76:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token/introspect");
+	    List<NameValuePair> params = new ArrayList<NameValuePair>();
+	    params.add(new BasicNameValuePair("client_id", client_Id));
+	    params.add(new BasicNameValuePair("client_secret", client_secret));
+	    params.add(new BasicNameValuePair("token", token));
+	    try {
+	    	httpPost.setEntity(new UrlEncodedFormEntity(params));
+	    } catch (UnsupportedEncodingException e) {
+	    	e.printStackTrace();
+	    }
+	      
+	    JsonObject tokenResponse;
+	    try {
+	    	CloseableHttpResponse tokenResponceObj = client.execute(httpPost);
+	        String jsonStr = EntityUtils.toString(tokenResponceObj.getEntity());
+	        tokenResponse = new JsonParser().parse(jsonStr).getAsJsonObject();      
+	        client.close();
+	      }
+	    catch (IOException e) {
+	        System.out.println("412\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
+	        e.printStackTrace();
+	        tokenResponse = null;
+	     }
+	      
+		try {
+			if ((tokenResponse != null) && (tokenResponse.get("active").getAsBoolean())) {
+				System.out.println(inputjson);
+				inputjson.forEach((resource,id)->{
+					JSONObject resourceObj = new JSONObject();
+					String urlString = "http://54.227.173.76:8181/fhir/baseDstu3/"+resource+"/"+id;
+				       
+//				       String urlString = "http://hapi.fhir.org/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
+					CloseableHttpClient httpClient = HttpClients.createDefault();
+
+				    System.out.println(urlString);
+				    HttpGet httpGet = new HttpGet(urlString);
+				//			   http://hapi.fhir.org/baseDstu3/Condition?patient=415133
+				    System.out.println(authorization);
+				   	httpGet.addHeader("Authorization",authorization);
+				   	   
+				   	   
+		   		   	StringBuffer fhirresponse = new StringBuffer();
+			        CloseableHttpResponse httpResponse;
+					try {
+						httpResponse = httpClient.execute(httpGet);
+						BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()));
+						
+				   		String inputLine;
+				   		
+				   		if(httpResponse.getStatusLine().getStatusCode() == 200) {
+				   			while ((inputLine = reader.readLine()) != null) {
+					   			fhirresponse.append(inputLine);
+					   		}
+				   			resourceObj  = new JSONObject(fhirresponse.toString());
+				   			
+				   			response.put(resource,resourceObj);
+				   			
+		//		   			entries.addAll(entry);
+				   		}else if(httpResponse.getStatusLine().getStatusCode() == 403) {
+				   			System.out.println("Access Denied");
+				   			throw new RequestIncompleteException("403 : Access Denied");
+				   			
+				   		}
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (RequestIncompleteException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+			   		
+			
+				});
+				
+				
+			}
+			else {
+		       throw new RequestIncompleteException("Invalid Oauth Token");
+		    }
+			
+		   
+		    
+		}
+		catch(RequestIncompleteException req_exception) {
+		  JSONObject errorObj = new JSONObject();
+	  	  errorObj.put("exception", req_exception.getMessage());
+	 	  return errorObj.toString();
+	 	}
+		  
+       
+		return response.toString();
+        
+
+
+  }
+  
+  
   @RequestMapping(value = "/prior_authorization", method = RequestMethod.POST, 
 		  consumes = "application/json", produces = "application/json")
   @ResponseBody
@@ -851,6 +988,9 @@ public class HomeController {
 
 
   }
+  
+  
+  
   
   @PostMapping("/review")
   @ResponseBody
