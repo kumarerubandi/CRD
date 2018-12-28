@@ -343,7 +343,7 @@ public class HomeController {
   
   
 //  @PostMapping("/coverage_determination")
-  @RequestMapping(value = "/coverage_decision", method = RequestMethod.POST, 
+  @RequestMapping(value = "/cds-services/coverage_decision", method = RequestMethod.POST, 
   consumes = "application/json", produces = "application/json")
   @ResponseBody
   public String coverageDecision(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers) {
@@ -569,7 +569,7 @@ public class HomeController {
   
   
   
-  @RequestMapping(value = "/coverage_requirement", method = RequestMethod.POST, 
+  @RequestMapping(value = "/cds-services/coverage_requirement", method = RequestMethod.POST, 
 		  consumes = "application/json", produces = "application/json")
   @ResponseBody
   public String coverageRequirement(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers) {
@@ -878,7 +878,7 @@ public class HomeController {
   }
   
   
-  @RequestMapping(value = "/prior_authorization", method = RequestMethod.POST, 
+  @RequestMapping(value = "/cds-services/prior_authorization", method = RequestMethod.POST, 
 		  consumes = "application/json", produces = "application/json")
   @ResponseBody
   public String priorAuthorization(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers) {

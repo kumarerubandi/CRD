@@ -1,0 +1,31 @@
+{
+  "services": [
+    {
+      "hook": "order-review",
+      "title": "order-review Coverage Requirements Discovery",
+      "description": "Get information regarding the coverage requirements for durable medical equipment",
+      "id": "coverage_decision",
+      "prefetch": {
+        "null"
+      }
+    },
+    {
+      "hook": "medication-prescribe",
+      "title": "medication-prescribe Coverage Requirements Discovery",
+      "description": "Get information regarding the coverage requirements for durable medical equipment",
+      "id": "coverage_requirement",
+      "prefetch": {
+        "null"
+      }
+    }
+    {
+      "hook": "device-request",
+      "title": "device request Coverage Requirements Discovery",
+      "description": "Get information regarding the coverage requirements for durable medical equipment",
+      "id": "prior-authorization",
+      "prefetch": {
+        "null"
+      }
+    }
+  ]
+}
