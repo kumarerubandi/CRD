@@ -29,6 +29,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.util.Iterator;
+ 
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+
 @Component
 public abstract class CdsService<requestTypeT extends CdsRequest<?, ?>> {
 
@@ -114,6 +122,25 @@ public abstract class CdsService<requestTypeT extends CdsRequest<?, ?>> {
    * @return The response from the server
    */
   public CdsResponse handleRequest(@Valid @RequestBody requestTypeT request) {
+//	  CdsResponse jsonObject = new CdsResponse();
+//	  JSONParser parser = new JSONParser();
+//	    try {
+//		    Object obj = parser.parse(new FileReader(
+//		            "/Users/kumarelubandi/WorkSpace/CRD/server/src/main/java/org/hl7/davinci/endpoint/cdshooks/services/crd/testResponse.json"));
+//		
+//		    jsonObject = (CdsResponse) obj;
+//		    System.out.println("Teststs response");
+//		    System.out.println(jsonObject);
+//		    return jsonObject;
+//
+//	    }
+//	    catch(FileNotFoundException e) {
+//	    	e.printStackTrace();
+//	    }
+//	    catch(Exception e) {
+//	    	e.printStackTrace();
+//	    }
+//	    return  jsonObject;
 
     boolean[] timeline = new boolean[5];
 
@@ -210,7 +237,11 @@ public abstract class CdsService<requestTypeT extends CdsRequest<?, ?>> {
     requestService.edit(requestLog);
     CardBuilder.errorCardIfNonePresent(response);
     logger.info("handleRequest: end");
+    
+    
+    
     return response;
+    
   }
 
 

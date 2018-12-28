@@ -50,6 +50,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 // import org.json.simple.parser.*;
 import com.google.gson.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Arrays;
 import java.util.Map;
@@ -741,6 +742,213 @@ public class HomeController {
 
   }
   
+
+	//@PostMapping("/coverage_determination")
+  @RequestMapping(value = "/patient_view", method = RequestMethod.POST, 
+	consumes = "application/json", produces = "application/json")
+  @ResponseBody
+  public String patient_view(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers) {
+	  final String authorization = headers.get("authorization");
+	  JSONObject tokenResponse = this.verifiyToken(authorization);
+//	  System.out.println(tokenResponse);
+	  if(tokenResponse.get("type") == "exception") {
+		  return tokenResponse.toString();
+	  }
+	  JSONObject response = new JSONObject();
+	  if((boolean)tokenResponse.get("active")) {
+		  ArrayList<JSONObject> cards = new ArrayList<JSONObject>();
+		  JSONObject singleCard = new JSONObject();
+		  JSONObject resource=new JSONObject();
+		  boolean getPatient = false;
+		  ObjectMapper oMapper = new ObjectMapper();
+		  System.out.println("Prefetch0:"+inputjson.get("prefetch")!=null);
+		  if(inputjson.containsKey("prefetch")) {
+			  String prefetchJson = "";
+			  try {
+				 prefetchJson = oMapper.writeValueAsString(inputjson.get("prefetch"));
+			  } catch (JsonProcessingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+			  }
+			  JSONObject prefetch = new JSONObject(prefetchJson);
+			  System.out.println("Prefetch1:"+inputjson.get("prefetch").getClass());
+			  if(prefetch.has("patient")) {
+				  System.out.println("Prefetch2:"+prefetch.getClass());
+				  System.out.println("Prefetch2.6:"+prefetch.get("patient").getClass());
+				  resource = oMapper.convertValue(prefetch.get("patient") , JSONObject.class);
+			  }else {
+				  System.out.println("Prefetch3"+prefetch.getClass());
+				  getPatient = true;	
+				  
+			  }
+		  }
+		  else {
+			  getPatient = true;	  
+		  }
+		  if(getPatient) {
+			  if(inputjson.containsKey("patient")) {
+				  resource= this.getResourceById("Patient",(String) inputjson.get("patient"),authorization);
+			  }
+			  
+		  }
+		  if(resource != null) {
+			if(resource.has("name")) {
+				JSONArray name = oMapper.convertValue(resource.get("name") , JSONArray.class);
+				if(name.length() > 0) {
+					JSONObject nameObj = oMapper.convertValue(name.get(0) , JSONObject.class);
+					if(nameObj.has("given")) {
+						System.out.println("788 "+nameObj.get("given").getClass());
+						List<String> nameList = oMapper.convertValue(nameObj.get("given") , List.class);
+						if(nameList.size() > 0) {
+							singleCard.put("summary", "Now seeing: "+nameList.get(0));
+							JSONObject sourceKey = new JSONObject();
+							
+							sourceKey.put("label", (String) this.getConfigData().get("patient_view_service_label"));
+							singleCard.put("indicator", "info");
+						    singleCard.put("source", sourceKey);
+						}
+						
+					  	cards.add(singleCard);
+					}
+					
+				}
+			  	
+			}
+		  }
+		  response.put("cards", cards);
+		  return response.toString();
+	  }
+	  else {
+		  response.put("Exception", "Invalid OAuth Token");
+		  return response.toString();
+	  }
+	  
+  }
+  
+  public JSONObject getConfigData() {
+	    File file;
+	    JSONObject configData = new JSONObject();
+		try {
+			file = ResourceUtils.getFile("classpath:config/data.json");
+			InputStream in = new FileInputStream(file);
+			String jsonTxt = IOUtils.toString(in, StandardCharsets.UTF_8);
+			configData = new JSONObject(jsonTxt);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return configData;
+		
+  }
+  
+  public JSONObject verifiyToken(String authorization) {
+	  JSONObject tokenResponse = new JSONObject();
+	  CloseableHttpClient client = HttpClients.createDefault();
+      // Get the token and drop the "Bearer"
+	    String token = null;
+	    try {
+	       if(authorization != null && authorization.startsWith("Bearer"))
+	       {
+	        token = authorization.substring("Bearer".length()).trim();
+	        System.out.println("token....");
+	        System.out.println(token);
+	          
+	       }
+	       else {
+		       
+	    	   throw new RequestIncompleteException("No valid authorization header was found");	       
+	       }
+	    }
+	    catch(RequestIncompleteException req_exception) {
+		  	JSONObject errorObj = new JSONObject();
+		  	errorObj.put("exception", req_exception.getMessage());
+		  	errorObj.put("type", "exception");
+	 		return errorObj;
+	 	}
+	    catch (Exception exception) {
+	        System.out.println("388 EXceptionnnnnn");
+	        exception.printStackTrace();
+	    }
+	      
+	    String client_Id = "app-token";
+	    String client_secret = "237b167a-c4d0-4861-856d-6decf5426022";
+	    HttpPost httpPost = new HttpPost("https://54.227.173.76:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token/introspect");
+	    List<NameValuePair> params = new ArrayList<NameValuePair>();
+	    params.add(new BasicNameValuePair("client_id", client_Id));
+	    params.add(new BasicNameValuePair("client_secret", client_secret));
+	    params.add(new BasicNameValuePair("token", token));
+	    try {
+	    	httpPost.setEntity(new UrlEncodedFormEntity(params));
+	    } catch (UnsupportedEncodingException e) {
+	    	e.printStackTrace();
+	    }
+	      
+	    try {
+	    	CloseableHttpResponse tokenResponceObj = client.execute(httpPost);
+	        String jsonStr = EntityUtils.toString(tokenResponceObj.getEntity());
+	        tokenResponse = new JSONObject(jsonStr);      
+	        client.close();
+	      }
+	    catch (IOException e) {
+	        System.out.println("412\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
+	        e.printStackTrace();
+	        tokenResponse = null;
+	     }
+//      System.out.println("Tokrkekek");
+//      System.out.println(tokenResponse);
+      tokenResponse.put("type", "token");
+	  return tokenResponse;
+	  
+  }
+		    
+  public JSONObject getResourceById(String resourceName,String resourceId,String authorization) {
+	  JSONObject response = new JSONObject();
+	  StringBuilder sb = new StringBuilder();
+	  String urlString = "http://54.227.173.76:8181/fhir/baseDstu3/"+resourceName+"/"+resourceId;
+      
+//      String urlString = "http://hapi.fhir.org/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
+      
+	  System.out.println(urlString);
+	  HttpGet httpGet = new HttpGet(urlString);
+	//			   http://hapi.fhir.org/baseDstu3/Condition?patient=415133
+	  System.out.println(authorization);
+	  httpGet.addHeader("Authorization",authorization);
+  	   
+	  StringBuffer fhirresponse = new StringBuffer();
+	  CloseableHttpClient httpClient = HttpClients.createDefault();
+	  CloseableHttpResponse httpResponse;
+	  try {
+			httpResponse = httpClient.execute(httpGet);
+			System.out.println("GET Response Status:: "
+					+ httpResponse.getStatusLine().getStatusCode());
+	
+			BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()));
+	
+			String inputLine;
+			
+			if(httpResponse.getStatusLine().getStatusCode() == 200) {
+				while ((inputLine = reader.readLine()) != null) {
+					fhirresponse.append(inputLine);
+				}
+				response  = new JSONObject(fhirresponse.toString());
+			}
+			else if(httpResponse.getStatusLine().getStatusCode() == 403) {
+				response.put("type", "Exception");
+				response.put("exception", "Access Denied");
+			}
+			reader.close();
+	  } catch (IOException e) {
+			// TODO Auto-generated catch block
+		e.printStackTrace();
+	  }
+		
+	  return response;
+  }
+  
+  
   @RequestMapping(value = "/prefetch", method = RequestMethod.POST, 
 		  consumes = "application/json", produces = "application/json")
   @ResponseBody
@@ -762,7 +970,7 @@ public class HomeController {
 	        token = authorization.substring("Bearer".length()).trim();
 	        System.out.println("token....");
 	        System.out.println(token);
-	          
+	        
 	       }
 	       else {
 		       
@@ -804,10 +1012,12 @@ public class HomeController {
 	        e.printStackTrace();
 	        tokenResponse = null;
 	     }
-	      
+	    int resourcesLength  = inputjson.size();
+	    JSONArray listResponse =  new JSONArray() ;
 		try {
 			if ((tokenResponse != null) && (tokenResponse.get("active").getAsBoolean())) {
 				System.out.println(inputjson);
+				
 				inputjson.forEach((resource,id)->{
 					JSONObject resourceObj = new JSONObject();
 					String urlString = "http://54.227.173.76:8181/fhir/baseDstu3/"+resource+"/"+id;
@@ -815,7 +1025,7 @@ public class HomeController {
 //				       String urlString = "http://hapi.fhir.org/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
 					CloseableHttpClient httpClient = HttpClients.createDefault();
 
-				    System.out.println(urlString);
+				    
 				    HttpGet httpGet = new HttpGet(urlString);
 				//			   http://hapi.fhir.org/baseDstu3/Condition?patient=415133
 				    System.out.println(authorization);
@@ -835,7 +1045,7 @@ public class HomeController {
 					   			fhirresponse.append(inputLine);
 					   		}
 				   			resourceObj  = new JSONObject(fhirresponse.toString());
-				   			
+				   			listResponse.put(resourceObj);
 				   			response.put(resource,resourceObj);
 				   			
 		//		   			entries.addAll(entry);
@@ -869,9 +1079,15 @@ public class HomeController {
 	  	  errorObj.put("exception", req_exception.getMessage());
 	 	  return errorObj.toString();
 	 	}
-		  
-       
-		return response.toString();
+		System.out.println(resourcesLength);
+		System.out.println(listResponse);
+        if(resourcesLength > 1) {
+        	return listResponse.toString();
+        }
+        else {
+        	return response.toString();
+        }
+		
         
 
 

@@ -155,6 +155,7 @@ public class PrefetchHydrator {
     RestTemplate restTemplate = new RestTemplate();
     HttpHeaders headers = new HttpHeaders();
     headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+    System.out.println("======"); System.out.println(token);
     if (token != null) {
       headers.set("Authorization", "Bearer " + token);
     }

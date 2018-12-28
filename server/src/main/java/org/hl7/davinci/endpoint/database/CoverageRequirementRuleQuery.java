@@ -34,14 +34,14 @@ public class CoverageRequirementRuleQuery {
     
     // response  = new List();
     // List<CoverageRequirementRule> response = new List<CoverageRequirementRule>();
-    CoverageRequirementRule response = new CoverageRequirementRule();
-    response.setInfoLink("https://www.cms.gov/Outreach-and-Education/Medicare-Learning-Network-MLN/MLNProducts/downloads/PMDFactSheet07_Quark19.pdf");
-    response.setEquipmentCode("abc123");
-    response.setCodeSystem("https://bluebutton.cms.gov/resources/codesystem/hcpcs");
-    response.setNoAuthNeeded(true);
-    response.setAgeRangeHigh(42);
-    response.setAgeRangeLow(0);
-    response.setGenderCode('M');
+//    CoverageRequirementRule response = new CoverageRequirementRule();
+//    response.setInfoLink("https://www.cms.gov/Outreach-and-Education/Medicare-Learning-Network-MLN/MLNProducts/downloads/PMDFactSheet07_Quark19.pdf");
+//    response.setEquipmentCode("abc123");
+//    response.setCodeSystem("https://bluebutton.cms.gov/resources/codesystem/hcpcs");
+//    response.setNoAuthNeeded(true);
+//    response.setAgeRangeHigh(42);
+//    response.setAgeRangeLow(0);
+//    response.setGenderCode('M');
     
 
     try{
