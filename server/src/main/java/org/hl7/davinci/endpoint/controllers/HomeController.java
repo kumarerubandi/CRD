@@ -232,16 +232,20 @@ public class HomeController {
 						}
 						System.out.println("P:attt");
 			   			System.out.println(patientObj);
-			   			JSONObject mappingFieldObj = oMapper.convertValue(patientObj.get((String) keyObj.get("field_common_with_patient")) , JSONObject.class);
-			   			String mappingField = (String) mappingFieldObj.get("reference");
-			   			System.out.println("mappingField Id");
-			   			System.out.println(mappingField);
-			   			String fieldId = mappingField.substring(((String)  keyObj.get("string")+"/").length()).trim();
-			   			System.out.println("Field Id");
-			   			System.out.println(fieldId);
-			   			finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?"+(String)keyObj.get("code_field")+"="+code+"&"+(String) keyObj.get("key")+"="+fieldId;
-					       
-						
+			   			if(patientObj.has((String) keyObj.get("field_common_with_patient"))) {
+				   			JSONObject mappingFieldObj = oMapper.convertValue(patientObj.get((String) keyObj.get("field_common_with_patient")) , JSONObject.class);
+				   			if(mappingFieldObj.has("reference")) {
+					   			String mappingField = (String) mappingFieldObj.get("reference");
+					   			System.out.println("mappingField Id");
+					   			System.out.println(mappingField);
+					   			if(mappingField.contains("/")) {
+						   			String fieldId = mappingField.substring(((String)  keyObj.get("string")+"/").length()).trim();
+						   			System.out.println("Field Id");
+						   			System.out.println(fieldId);
+						   			finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?"+(String)keyObj.get("code_field")+"="+code+"&"+(String) keyObj.get("key")+"="+fieldId;
+					   			}
+				   			}
+			   			}
 					}
 				}
 				else {
