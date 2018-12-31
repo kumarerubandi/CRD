@@ -190,10 +190,17 @@ public class HomeController {
 		   return errorObj.toString();
 	   }
        JSONObject patientObj= this.getResourceById("Patient",appData.get("patientId").toString() , authorization);
+       if(patientObj.has("resourceType")) {
+    	   entries.add(patientObj);
+       }
        entries.add(patientObj);
 	   appData.forEach((key,value) -> {
 		   if(key != "patientId") {
-			   entries.add(this.getResourceById(key,value.toString(), authorization));
+			   JSONObject entryObject = this.getResourceById(key,value.toString(), authorization);
+			   if(entryObject.has("resourceType")) {
+				   entries.add(entryObject);
+			   }
+			   
 		   }
 	   });
 	   resources.forEach((key,value) -> {
