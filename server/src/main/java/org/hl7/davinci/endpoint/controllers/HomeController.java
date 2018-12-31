@@ -548,7 +548,7 @@ public class HomeController {
       	
       		
 	        // execute method and handle any error responses.
-	    	URL url = new URL("http://localhost:3000/execute_cql");
+	    	URL url = new URL("http://localhost:4200/execute_cql");
 	        Gson gsonObj = new Gson();
 	        reqJson.put("request_for", "decision");
 	        String jsonStr = reqJson.toString();
@@ -713,7 +713,7 @@ public class HomeController {
     	      	
         
 	        // execute method and handle any error responses.
-	    	URL url = new URL("http://localhost:3000/execute_cql");
+	    	URL url = new URL("http://localhost:4200/execute_cql");
 	        Gson gsonObj = new Gson();
 	        reqJson.put("request_for", "requirements");
 	        String jsonStr = reqJson.toString();
