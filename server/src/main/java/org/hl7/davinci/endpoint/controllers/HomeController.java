@@ -325,7 +325,11 @@ public class HomeController {
 				   	       
 				   			entry.forEach((element) -> {
 				   				System.out.println("\n\n\n ==========="+element);
-				   				entries.add(element);
+				   				JSONObject searchResultJson = oMapper.convertValue(element , JSONObject.class);
+					   			if(searchResultJson.has("resource")) {
+					   				entries.add(searchResultJson.get("resource"));
+					   			}
+				   				
 				   				
 				   			});
 			   			}
