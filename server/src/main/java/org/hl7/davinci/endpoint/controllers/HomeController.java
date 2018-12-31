@@ -778,13 +778,13 @@ public class HomeController {
   
 
 	//@PostMapping("/coverage_determination")
-  @RequestMapping(value = "/patient_view", method = RequestMethod.POST, 
+  @RequestMapping(value = "/cds-services/patient_view", method = RequestMethod.POST, 
 	consumes = "application/json", produces = "application/json")
   @ResponseBody
   public String patient_view(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers) {
 	  final String authorization = headers.get("authorization");
 	  JSONObject tokenResponse = this.verifiyToken(authorization);
-//	  System.out.println(tokenResponse);
+	  System.out.println(tokenResponse);
 	  if(tokenResponse.get("type") == "exception") {
 		  return tokenResponse.toString();
 	  }
@@ -807,11 +807,8 @@ public class HomeController {
 			  JSONObject prefetch = new JSONObject(prefetchJson);
 			  System.out.println("Prefetch1:"+inputjson.get("prefetch").getClass());
 			  if(prefetch.has("patient")) {
-				  System.out.println("Prefetch2:"+prefetch.getClass());
-				  System.out.println("Prefetch2.6:"+prefetch.get("patient").getClass());
 				  resource = oMapper.convertValue(prefetch.get("patient") , JSONObject.class);
 			  }else {
-				  System.out.println("Prefetch3"+prefetch.getClass());
 				  getPatient = true;	
 				  
 			  }
@@ -820,8 +817,10 @@ public class HomeController {
 			  getPatient = true;	  
 		  }
 		  if(getPatient) {
-			  if(inputjson.containsKey("patient")) {
-				  resource= this.getResourceById("Patient",(String) inputjson.get("patient"),authorization);
+			  System.out.println("inputjson.containsKey(");
+			  System.out.println(inputjson.containsKey("patientId"));
+			  if(inputjson.containsKey("patientId")) {
+				  resource= this.getResourceById("Patient",(String) inputjson.get("patientId"),authorization);
 			  }
 			  
 		  }
