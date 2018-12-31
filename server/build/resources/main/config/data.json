@@ -16,5 +16,6 @@
 			"code_field":"type",
 			"has_patient_field":true
 		}
-	}
+	},
+	"patient_view_service_label":"Mettle solutions patient view service"
 }
