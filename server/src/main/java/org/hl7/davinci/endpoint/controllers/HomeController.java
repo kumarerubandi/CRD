@@ -629,6 +629,16 @@ public class HomeController {
       Map<String, Object> orders = oMapper.convertValue(context.get("orders") , Map.class);
 
 //		      System.out.println(context);
+      String hook = "";
+      if(inputjson.containsKey("hook")) {
+    	  hook  = (String) inputjson.get("hook");
+      }
+      else {
+    	  JSONObject errorObj = new JSONObject();
+	  	  errorObj.put("exception", "hook is missing in the request body");
+	 	  return errorObj.toString();
+      }
+      
       
       JSONObject reqJson = new JSONObject();
       JSONObject patientFhir = new JSONObject();
@@ -639,7 +649,7 @@ public class HomeController {
 		  JSONObject configData = new JSONObject(jsonTxt);
 		  
 //		  System.out.println("configData:\n"+ configData.get("hook_cql_map"));
-		  String hook  = (String) inputjson.get("hook");
+		  
 		  JSONObject hookMap = oMapper.convertValue(configData.get("hook_cql_map") , JSONObject.class);
 //		  System.out.println(hookMap);
 		  List<String> hookList = oMapper.convertValue(hookMap.get(hook) , List.class);
@@ -758,9 +768,15 @@ public class HomeController {
 	        applink.put("type","smart");
 	        applink.put("appContext",jsonObj.get("requirements"));
 	        links.add(applink);
+	        
+	        JSONObject sourceJson = new JSONObject();
+
+	        sourceJson.put("label","CMS Medicare coverage database");
+	        sourceJson.put("url","https://www.cms.gov/medicare-coverage-database/details/ncd-details.aspx?NCDId=70&ncdver=3&bc=AAAAgAAAAAAA&\n");
 	        singleCard.put("links", links);
+	        singleCard.put("source", sourceJson);
 	        singleCard.put("suggestions", suggestions);
-	        singleCard.put("summary","List of Requirements");
+	        singleCard.put("summary","Requirements for "+HomeController.toTitleCase(hook.replace("-", " ")));
 	        singleCard.put("indicator","info");
 	        singleCard.put("detail","The requested procedure needs more documentation to process further");
 	        cards.add(singleCard);
@@ -788,6 +804,24 @@ public class HomeController {
 
   }
   
+  
+  public static String toTitleCase(String input) {
+	    StringBuilder titleCase = new StringBuilder();
+	    boolean nextTitleCase = true;
+
+	    for (char c : input.toCharArray()) {
+	        if (Character.isSpaceChar(c)) {
+	            nextTitleCase = true;
+	        } else if (nextTitleCase) {
+	            c = Character.toTitleCase(c);
+	            nextTitleCase = false;
+	        }
+
+	        titleCase.append(c);
+	    }
+
+	    return titleCase.toString();
+	}
 
 	//@PostMapping("/coverage_determination")
   @RequestMapping(value = "/cds-services/patient_view", method = RequestMethod.POST, 
