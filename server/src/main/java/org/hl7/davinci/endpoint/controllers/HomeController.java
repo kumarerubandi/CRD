@@ -204,8 +204,9 @@ public class HomeController {
 		   }
 	   });
 	   resources.forEach((key,value) -> {
-	       System.out.println("\n\n\n ------------");
-	//		       System.out.println(value.get("codes").getClass());
+	       System.out.println("\n\n\n KEY/////// ------------");
+			       System.out.println(key);
+	       
 	       List<LinkedHashMap> codes = oMapper.convertValue(value.get("codes") , List.class);
 	       String code = oMapper.convertValue(codes.get(0).get("code") , String.class);
 	       String display = oMapper.convertValue(value.get("display") , String.class);
@@ -1210,6 +1211,9 @@ public class HomeController {
 				String jsonTxt = IOUtils.toString(in, StandardCharsets.UTF_8);
 				JSONObject configData = new JSONObject(jsonTxt);
 				ObjectMapper oMapper = new ObjectMapper();
+				
+				//OLD Logic ---- start
+				/*
 				List<String> allowedResources = oMapper.convertValue(configData.get("PriorAuthorizationResources") , List.class);
 				Map<String, Object> context = oMapper.convertValue(inputjson.get("context") , Map.class);
 			    Map<String, Object> orders = oMapper.convertValue(context.get("orders") , Map.class);
@@ -1224,6 +1228,23 @@ public class HomeController {
 				    	  
 				      }
 			    });
+			    */
+			    //OLD LOGIC ---- END
+				
+				//Updated LOGIC
+				if(inputjson.containsKey("hook") && configData.has("PriorAuthorizationHooks")) {
+					String hook  = (String) inputjson.get("hook");
+					List<String> allowedHooks = oMapper.convertValue(configData.get("PriorAuthorizationHooks") , List.class);
+					if(allowedHooks.contains(hook)) {
+				    	  response.put("PriorAuthorization", true);
+				    	  
+				      }
+					
+				}
+				else {
+					System.out.println("Missing Key");
+				}
+				
 //			}
 //			else {
 //		       throw new RequestIncompleteException("Invalid Oauth Token");

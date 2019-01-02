@@ -4,6 +4,7 @@
 	    "liver-transplant":["AdultLiverTransplantation"]
 	},
 	"PriorAuthorizationResources":["DeviceRequest"],
+	"PriorAuthorizationHooks":["order-review"],
 	"fhir_field_mapper":{
 		"Location":{
 			"code_field":"type",
