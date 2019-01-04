@@ -7,14 +7,19 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.NameValuePair;
@@ -156,215 +161,200 @@ public class HomeController {
 	   System.out.println(inputjson);
 	   ObjectMapper oMapper = new ObjectMapper();
 	   JSONObject errorObj = new JSONObject();
-	   List<Object> appContext = oMapper.convertValue(inputjson.get("appContext") , List.class);
-	   if(appContext.size() == 0) {
-		   errorObj.put("type", "Exception");
-		   errorObj.put("Exception", "Data is missing in appContext");
-		   return errorObj.toString();
-	   }
-	   Map<String, LinkedHashMap> valueInFirstIndex = oMapper.convertValue(appContext.get(0) , Map.class);
-	   if(!valueInFirstIndex.containsKey("requirements")) {
-		   errorObj.put("type", "Exception");
-		   errorObj.put("Exception", "Couldn't find requirements in the given request's appContext");
-		   return errorObj.toString();
-	   }
-	   if(!valueInFirstIndex.containsKey("appData")) {
-		   errorObj.put("type", "Exception");
-		   errorObj.put("Exception", "Couldn't find appData in the given request's appContext");
-		   return errorObj.toString();
-	   }
-	   Map<String, LinkedHashMap> resources = oMapper.convertValue(valueInFirstIndex.get("requirements") , Map.class);
-	   Map<String, Object> appData = oMapper.convertValue(valueInFirstIndex.get("appData") , Map.class);
-	   
-//	   Map<String, LinkedHashMap> resources = oMapper.convertValue(appContext.get(0) , Map.class);
-	   final String authorization = headers.get("authorization");
-	   CloseableHttpClient httpClient = HttpClients.createDefault();
+	   JSONArray appContext ;
+	   String basePathOfClass = getClass().getProtectionDomain().getCodeSource().getLocation().getFile();
+       String[] splitPath = basePathOfClass.split("server/build/classes/java/main/");
+       CloseableHttpClient httpClient = HttpClients.createDefault();
 	   List<Object> entries =  new ArrayList();
-	   
-	   String ResourceField = null;
-	   boolean recievedPatientData = false;
-	   
-	   if(!appData.containsKey("patientId")) {
-		   errorObj.put("type", "Exception");
-		   errorObj.put("Exception", "Patient ID is missing");
-		   return errorObj.toString();
-	   }
-       JSONObject patientObj= this.getResourceById("Patient",appData.get("patientId").toString() , authorization);
-       if(patientObj.has("resourceType")) {
-    	   entries.add(patientObj);
-       }
-       entries.add(patientObj);
-	   appData.forEach((key,value) -> {
-		   if(key != "patientId") {
-			   JSONObject entryObject = this.getResourceById(key,value.toString(), authorization);
-			   if(entryObject.has("resourceType")) {
-				   entries.add(entryObject);
+       if(splitPath.length == 1) {
+    	  
+     	   File filesDirectory = new File(splitPath[0]+"data_files");
+     	   try {
+			   File appContextFile = ResourceUtils.getFile(filesDirectory+"/"+ (String) inputjson.get("appContext")+".json");
+			   InputStream inStream = new FileInputStream(appContextFile);
+			   String jsonContent = IOUtils.toString(inStream, StandardCharsets.UTF_8);
+			   appContext = new JSONArray(jsonContent) ;
+	       
+			   System.out.println("-----APP Contextt --");
+			   System.out.println(appContext);
+			   if(appContext.length() == 0) {
+				   errorObj.put("type", "Exception");
+				   errorObj.put("Exception", "Data is missing in appContext");
+				   return errorObj.toString();
 			   }
+			   JSONObject valueInFirstIndex = oMapper.convertValue(appContext.get(0) , JSONObject.class);
+			   if(!valueInFirstIndex.has("requirements")) {
+				   errorObj.put("type", "Exception");
+				   errorObj.put("Exception", "Couldn't find requirements in the given request's appContext");
+				   return errorObj.toString();
+			   }
+			   if(!valueInFirstIndex.has("appData")) {
+				   errorObj.put("type", "Exception");
+				   errorObj.put("Exception", "Couldn't find appData in the given request's appContext");
+				   return errorObj.toString();
+			   }
+//			   System.out.println(valueInFirstIndex.get("requirements").getClass());
+//			   System.out.println(valueInFirstIndex.get("appData").getClass());
+//			   System.out.println(valueInFirstIndex.get("requirements"));
+			   JSONArray requirementsArray = oMapper.convertValue(valueInFirstIndex.get("requirements") , JSONArray.class);
+			   JSONObject resources = new JSONObject();
+			   if(requirementsArray.length()>0) {
+				   resources = requirementsArray.getJSONObject(0);
+			   }
+			   JSONObject  appData = oMapper.convertValue(valueInFirstIndex.get("appData").toString() , JSONObject.class);
+//			   System.out.println("-----Resssus --");
+//			   System.out.println(resources);
+//			   System.out.println(appData);
 			   
-		   }
-	   });
-	   resources.forEach((key,value) -> {
-	       System.out.println("\n\n\n KEY/////// ------------");
-			       System.out.println(key);
-	       
-	       List<LinkedHashMap> codes = oMapper.convertValue(value.get("codes") , List.class);
-	       String code = oMapper.convertValue(codes.get(0).get("code") , String.class);
-	       String display = oMapper.convertValue(value.get("display") , String.class);
-	       File file;
-			try {
-				file = ResourceUtils.getFile("classpath:config/data.json");
-				InputStream in = new FileInputStream(file);
-				String jsonTxt = IOUtils.toString(in, StandardCharsets.UTF_8);
-				JSONObject configData = new JSONObject(jsonTxt);
-				JSONObject fieldMapper = oMapper.convertValue(configData.get("fhir_field_mapper") , JSONObject.class);
-				String finalUrl = "";
-				if(fieldMapper.has(key)) {
-					JSONObject keyObj = oMapper.convertValue(fieldMapper.get(key) , JSONObject.class);
-					if((boolean) keyObj.get("has_patient_field")) {
-						System.out.println("Has patient field : "+key);
-						finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?"+(String)keyObj.get("code_field")+"="+code+"&patient="+appData.get("patientId");
-					    	
-					}
-					else {
-						System.out.println("No patient fields : "+key);
-						System.out.println("field_common_with_patient : "+keyObj.get("field_common_with_patient"));
-//						JSONObject patientObj= new JSONObject();
-//						if(recievedPatientData == false) {
-//
-//						    String urlString = "http://54.227.173.76:8181/fhir/baseDstu3/Patient/"+appData.get("patientId");
-//						       
-////						       String urlString = "http://hapi.fhir.org/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
-//						       
-//						    System.out.println(urlString);
-//						    HttpGet httpGet = new HttpGet(urlString);
-//						//			   http://hapi.fhir.org/baseDstu3/Condition?patient=415133
-//						    System.out.println(authorization);
-//						   	httpGet.addHeader("Authorization",authorization);
-//						   	   
-//						   	   
-//				   		   	StringBuffer fhirresponse = new StringBuffer();
-//					        CloseableHttpResponse httpResponse = httpClient.execute(httpGet);
-//					   		System.out.println("GET Response Status:: "
-//					   				+ httpResponse.getStatusLine().getStatusCode());
-//					
-//					   		BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()));
-//					
-//					   		String inputLine;
-//					   		
-//					   		if(httpResponse.getStatusLine().getStatusCode() == 200) {
-//					   			while ((inputLine = reader.readLine()) != null) {
-//						   			fhirresponse.append(inputLine);
-//						   		}
-//					   			patientObj  = new JSONObject(fhirresponse.toString());
-//					   			
-//						       
-//					   			
-//			//		   			entries.addAll(entry);
-//					   		}else if(httpResponse.getStatusLine().getStatusCode() == 403) {
-//					   			System.out.println("Access Denied");
-//					   		}
-//					   		
-//			
-//					   		System.out.println("fhirresponse");
-//					   		System.out.println(fhirresponse);
-//					   		reader.close();
-//					
-//					   		recievedPatientData = true;
-//						}
-						System.out.println("P:attt");
-			   			System.out.println(patientObj);
-			   			if(patientObj.has((String) keyObj.get("field_common_with_patient"))) {
-				   			JSONObject mappingFieldObj = oMapper.convertValue(patientObj.get((String) keyObj.get("field_common_with_patient")) , JSONObject.class);
-				   			if(mappingFieldObj.has("reference")) {
-					   			String mappingField = (String) mappingFieldObj.get("reference");
-					   			System.out.println("mappingField Id");
-					   			System.out.println(mappingField);
-					   			if(mappingField.contains("/")) {
-						   			String fieldId = mappingField.substring(((String)  keyObj.get("string")+"/").length()).trim();
-						   			System.out.println("Field Id");
-						   			System.out.println(fieldId);
-						   			finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?"+(String)keyObj.get("code_field")+"="+code+"&"+(String) keyObj.get("key")+"="+fieldId;
-					   			}
-				   			}
-			   			}
-					}
-				}
-				else {
-				       finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?patient="+appData.get("patientId")+"&code="+code;
-				} 
-//				       String urlString = "http://hapi.fhir.org/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
-				System.out.println("Finalalala: "+key);
-		        System.out.println(finalUrl);
-		        if(finalUrl != "") {
-			        HttpGet httpGet = new HttpGet(finalUrl);
-			//			   http://hapi.fhir.org/baseDstu3/Condition?patient=415133
-			        System.out.println(authorization);
-			   	    httpGet.addHeader("Authorization",authorization);
-			   	   
-			   	   
-		   		   	StringBuffer fhirresponse = new StringBuffer();
-			        CloseableHttpResponse httpResponse = httpClient.execute(httpGet);
-			   		System.out.println("GET Response Status:: "
-			   				+ httpResponse.getStatusLine().getStatusCode());
-			
-			   		BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()));
-			
-			   		String inputLine;
-			   		
-			   		if(httpResponse.getStatusLine().getStatusCode() == 200) {
-			   			while ((inputLine = reader.readLine()) != null) {
-				   			fhirresponse.append(inputLine);
-				   		}
-			   			JSONObject response  = new JSONObject(fhirresponse.toString());
-			   			System.out.println("Resssss");
-			   			System.out.println(response);
-			   			
-			   			int total = (int) response.get("total");
-			   			System.out.println(total);
-			   			if(total != 0) {
-			   				JSONArray entry = new JSONArray(response.get("entry").toString());
-				   			System.out.println("\n\n\n"+response.get("entry").getClass()+":::::::::::::"+response.get("entry"));
-		
-		//		   			List<JSONObject> entry = oMapper.convertValue(response.get("entry"), List.class);;
-				   			
-		//		   			System.out.println("\n\n\n:::::::::::::"+entry);
-		//		   			response.get("entry").getClass();
-				   			
-				   	       
-				   			entry.forEach((element) -> {
-				   				System.out.println("\n\n\n ==========="+element);
-				   				JSONObject searchResultJson = oMapper.convertValue(element , JSONObject.class);
-					   			if(searchResultJson.has("resource")) {
-					   				entries.add(searchResultJson.get("resource"));
-					   			}
-				   				
-				   				
-				   			});
-			   			}
-			   			
-	//		   			entries.addAll(entry);
-			   		}
-			   		
-	
-			   		System.out.println("fhirresponse");
-			   		System.out.println(fhirresponse.getClass());
-			   		reader.close();
-		        }
-		   	   
-	       
+		//	   Map<String, LinkedHashMap> resources = oMapper.convertValue(appContext.get(0) , Map.class);
+			   final String authorization = headers.get("authorization");
+			   
+			   
+			   String ResourceField = null;
+			   boolean recievedPatientData = false;
+			   
+			   if(!appData.has("patientId")) {
+				   errorObj.put("type", "Exception");
+				   errorObj.put("Exception", "Patient ID is missing");
+				   return errorObj.toString();
+			   }
+		       JSONObject patientObj= this.getResourceById("Patient",appData.get("patientId").toString() , authorization);
+		       if(patientObj.has("resourceType")) {
+		    	   entries.add(patientObj);
+		       }
+		       Iterator<String> appDataKeys = appData.keys();
+		       Iterator<String> resourceKeys = resources.keys();
+		       while(appDataKeys.hasNext()) {
+		    	   String key = (String)appDataKeys.next();
+		           String value = appData.getString(key);
+//		           System.out.println("1, Key-Val : "+key+" -- "+ value);
+		           if(key != "patientId") {
+					   JSONObject entryObject = this.getResourceById(key,value.toString(), authorization);
+					   if(entryObject.has("resourceType")) {
+						   entries.add(entryObject);
+					   }
+					   
+				   }
+		       }
 
-		       
-			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
+		       while(resourceKeys.hasNext()) {
+		    	   String key = (String)resourceKeys.next();
+		           JSONObject value =  oMapper.convertValue(resources.get(key) , JSONObject.class);
+//		           System.out.println("\n\n2, Key-Val : "+key+" -- "+ value.toString());
+
+			       JSONArray codes = oMapper.convertValue(value.get("codes") , JSONArray.class);
+			       JSONObject codeObject =  oMapper.convertValue(codes.get(0), JSONObject.class);
+			       String code = oMapper.convertValue(codeObject.get("code") , String.class);
+			       String display = oMapper.convertValue(value.get("display") , String.class);
+			       File file;
+					try {
+						file = ResourceUtils.getFile("classpath:config/data.json");
+						InputStream in = new FileInputStream(file);
+						String jsonTxt = IOUtils.toString(in, StandardCharsets.UTF_8);
+						JSONObject configData = new JSONObject(jsonTxt);
+						JSONObject fieldMapper = oMapper.convertValue(configData.get("fhir_field_mapper") , JSONObject.class);
+						String finalUrl = "";
+						if(fieldMapper.has(key)) {
+							JSONObject keyObj = oMapper.convertValue(fieldMapper.get(key) , JSONObject.class);
+							if((boolean) keyObj.get("has_patient_field")) {
+								System.out.println("Has patient field : "+key);
+								finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?"+(String)keyObj.get("code_field")+"="+code+"&patient="+appData.get("patientId");
+							    	
+							}
+							else {
+
+					   			if(patientObj.has((String) keyObj.get("field_common_with_patient"))) {
+						   			JSONObject mappingFieldObj = oMapper.convertValue(patientObj.get((String) keyObj.get("field_common_with_patient")) , JSONObject.class);
+						   			if(mappingFieldObj.has("reference")) {
+							   			String mappingField = (String) mappingFieldObj.get("reference");
+							   			System.out.println("mappingField Id");
+							   			System.out.println(mappingField);
+							   			if(mappingField.contains("/")) {
+								   			String fieldId = mappingField.substring(((String)  keyObj.get("string")+"/").length()).trim();
+								   			System.out.println("Field Id");
+								   			System.out.println(fieldId);
+								   			finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?"+(String)keyObj.get("code_field")+"="+code+"&"+(String) keyObj.get("key")+"="+fieldId;
+							   			}
+						   			}
+					   			}
+							}
+						}
+						else {
+						       finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?patient="+appData.get("patientId")+"&code="+code;
+						} 
+
+				        if(finalUrl != "") {
+					        HttpGet httpGet = new HttpGet(finalUrl);
+					   	    httpGet.addHeader("Authorization",authorization);
+					   	   
+					   	   
+				   		   	StringBuffer fhirresponse = new StringBuffer();
+					        CloseableHttpResponse httpResponse = httpClient.execute(httpGet);
+					   		System.out.println("GET Response Status:: "
+					   				+ httpResponse.getStatusLine().getStatusCode());
+					
+					   		BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()));
+					
+					   		String inputLine;
+					   		
+					   		if(httpResponse.getStatusLine().getStatusCode() == 200) {
+					   			while ((inputLine = reader.readLine()) != null) {
+						   			fhirresponse.append(inputLine);
+						   		}
+					   			JSONObject response  = new JSONObject(fhirresponse.toString());
+					   			System.out.println("Resssss");
+					   			System.out.println(response);
+					   			
+					   			int total = (int) response.get("total");
+					   			System.out.println(total);
+					   			if(total != 0) {
+					   				JSONArray entry = new JSONArray(response.get("entry").toString());
+						   			System.out.println("\n\n\n"+response.get("entry").getClass()+":::::::::::::"+response.get("entry"));
+				
+						   			entry.forEach((element) -> {
+						   				System.out.println("\n\n\n ==========="+element);
+						   				JSONObject searchResultJson = oMapper.convertValue(element , JSONObject.class);
+							   			if(searchResultJson.has("resource")) {
+							   				entries.add(searchResultJson.get("resource"));
+							   			}
+						   				
+						   				
+						   			});
+					   			}
+					   			
+					   		}
+					   		
+			
+					   		System.out.println("fhirresponse");
+					   		System.out.println(fhirresponse.getClass());
+					   		reader.close();
+				        }
+				   	   
+			       
+		
+				       
+					} catch (FileNotFoundException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				
+			       
+			       
+			   }
+			   try {
+					httpClient.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+     	   }
+     	  catch (FileNotFoundException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-		
-	       
-	       
-	   });
+     	  
+  	   }
 	   System.out.println("entriii");
 
 			   System.out.println(entries);
@@ -374,12 +364,7 @@ public class HomeController {
 		// print result
 		
 		
-		try {
-			httpClient.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		
 		
 
 	   	 
@@ -614,21 +599,38 @@ public class HomeController {
 
   }
   
-  
+  protected String getSaltString() {
+      String SALTCHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+      StringBuilder salt = new StringBuilder();
+      Random rnd = new Random();
+      while (salt.length() < 12) { // length of the random string.
+          int index = (int) (rnd.nextFloat() * SALTCHARS.length());
+          salt.append(SALTCHARS.charAt(index));
+      }
+      String saltStr = salt.toString();
+      return saltStr;
+
+  }
   
   @RequestMapping(value = "/cds-services/coverage_requirement", method = RequestMethod.POST, 
 		  consumes = "application/json", produces = "application/json")
   @ResponseBody
   public String coverageRequirement(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers) {
 	  
-	  System.out.println("------");
-      System.out.println(inputjson);
+//	  System.out.println("------");
+//      System.out.println(inputjson);
       ObjectMapper oMapper = new ObjectMapper();
       File file;
+      JSONObject appData = new JSONObject();
       Map<String, Object> context = oMapper.convertValue(inputjson.get("context") , Map.class);
       Map<String, Object> orders = oMapper.convertValue(context.get("orders") , Map.class);
-
 //		      System.out.println(context);
+      if(context.containsKey("patientId")) {
+    	  appData.put("patientId", (String) context.get("patientId"));
+      }
+      if(context.containsKey("userId")) {
+    	  appData.put("Practitioner", (String) context.get("userId"));
+      }
       String hook = "";
       if(inputjson.containsKey("hook")) {
     	  hook  = (String) inputjson.get("hook");
@@ -638,8 +640,6 @@ public class HomeController {
 	  	  errorObj.put("exception", "hook is missing in the request body");
 	 	  return errorObj.toString();
       }
-      
-      
       JSONObject reqJson = new JSONObject();
       JSONObject patientFhir = new JSONObject();
       try {
@@ -716,6 +716,8 @@ public class HomeController {
       try {
         CloseableHttpResponse response = client.execute(httpPost);
         String jsonStr = EntityUtils.toString(response.getEntity());
+        System.out.println("------Get jsosoosn responsee------");
+        System.out.println(jsonStr);
         tokenResponse = new JsonParser().parse(jsonStr).getAsJsonObject();      
         client.close();
       }
@@ -754,9 +756,49 @@ public class HomeController {
 	        while((line=in.readLine())!= null){
 	          sb.append(line);
 	        }
+	        String basePathOfClass = getClass().getProtectionDomain().getCodeSource().getLocation().getFile();
+	        System.out.println("---crd path---");
+	       
+	        
+	        JSONObject jsonObj = new JSONObject(sb.toString());
+	        jsonObj.put("appData", appData);
+	        jsonObj.put("hook", hook);
+	        JSONArray appContext = new JSONArray();
+	        appContext.put(jsonObj);
+	        String[] splitPath = basePathOfClass.split("server/build/classes/java/main/");
+	        System.out.println(splitPath.length > 1);
+	        System.out.println(splitPath.length + "  " + basePathOfClass.split("server/build/classes/").length );
+	        boolean fileCreated = false;
+	        String filename = "";
+	        if(splitPath.length == 1) {
+	      	  File filesDirectory = new File(splitPath[0]+"data_files");
+	      	  System.out.println(filesDirectory.exists());
+	      	  System.out.println(filesDirectory.isDirectory());
+	      	  if (filesDirectory.exists() && filesDirectory.isDirectory()) {
+	      		  File newFile = new File(filesDirectory,this.getSaltString()+".json");
+	      		  while(newFile.exists()) {
+	      			  newFile = new File(filesDirectory,this.getSaltString()+".json");
+	      		  }
+	      		  
+	      		  if (newFile.createNewFile())
+  				  {
+	      			  filename = newFile.getName();
+  				      System.out.println("File is created!");
+  				      PrintWriter writer = new PrintWriter(newFile, "UTF-8");
+  				      
+	  				  writer.print(appContext.toString());
+	  				  writer.close();
+	  				  fileCreated = true;
+  				      
+  				  } else {
+  				      System.out.println("File already exists.");
+  				  }
+	  			   
+	      	  }
+	        }
 	//        System.out.println("");
 	//        System.out.println(sb);
-	        JSONObject jsonObj = new JSONObject(sb.toString());
+	        
 	        JSONObject singleCard = new JSONObject();
 	        
 	        ArrayList<JSONObject> suggestions = new ArrayList<JSONObject>();
@@ -766,7 +808,8 @@ public class HomeController {
 	        applink.put("label","SMART App");
 	        applink.put("url","http://localhost:3000/cd");
 	        applink.put("type","smart");
-	        applink.put("appContext",jsonObj.get("requirements"));
+//	        applink.put("appContext",jsonObj.get("requirements"));
+	        applink.put("appContext", filename.replace(".json", ""));
 	        links.add(applink);
 	        
 	        JSONObject sourceJson = new JSONObject();
@@ -794,6 +837,10 @@ public class HomeController {
 	  	  errorObj.put("exception", req_exception.getMessage());
 	 	  return errorObj.toString();
 	 	}
+     catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	 catch (Exception exception) {
 	        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
 	        exception.printStackTrace();
