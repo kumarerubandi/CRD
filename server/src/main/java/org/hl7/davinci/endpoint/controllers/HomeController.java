@@ -628,14 +628,19 @@ public class HomeController {
   @ResponseBody
   public String coverageRequirement(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers) {
 	  
-//	  System.out.println("------");
-//      System.out.println(inputjson);
+	  System.out.println("------");
+      System.out.println(inputjson);
+      String referer = "";
+      if(headers.containsKey("referer")) {
+    	  referer = headers.get("referer");
+      }
       ObjectMapper oMapper = new ObjectMapper();
       File file;
       JSONObject appData = new JSONObject();
       Map<String, Object> context = oMapper.convertValue(inputjson.get("context") , Map.class);
       Map<String, Object> orders = oMapper.convertValue(context.get("orders") , Map.class);
 //		      System.out.println(context);
+      
       if(context.containsKey("patientId")) {
     	  appData.put("patientId",  context.get("patientId").toString());
       }
@@ -817,7 +822,12 @@ public class HomeController {
 	        ArrayList<JSONObject> cards = new ArrayList<JSONObject>();
 	        JSONObject applink = new JSONObject();
 	        applink.put("label","SMART App");
-	        applink.put("url","http://localhost:3000/cd");
+	        String appLinkURL = referer.replace("provider_request", "");
+	        System.out.println("|| appLinkURL : "+appLinkURL);
+	        if(!inputjson.containsKey("fhirServer")) {
+	        	 throw new RequestIncompleteException("Parameter Missing : key 'fhirServer' is missing in given request");	    
+	        }
+	        applink.put("url",appLinkURL+"launch?launch="+filename.replace(".json", "")+"&iss="+inputjson.get("fhirServer").toString());
 	        applink.put("type","smart");
 //	        applink.put("appContext",jsonObj.get("requirements"));
 	        applink.put("appContext", filename.replace(".json", ""));
