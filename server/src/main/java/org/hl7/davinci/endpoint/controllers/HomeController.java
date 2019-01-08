@@ -159,6 +159,7 @@ public class HomeController {
 	
 	   System.out.println("Input Json");
 	   System.out.println(inputjson);
+	   String response = "";
 	   ObjectMapper oMapper = new ObjectMapper();
 	   JSONObject errorObj = new JSONObject();
 	   JSONArray appContext ;
@@ -172,7 +173,12 @@ public class HomeController {
      	   try {
 			   File appContextFile = ResourceUtils.getFile(filesDirectory+"/"+ (String) inputjson.get("appContext")+".json");
 			   InputStream inStream = new FileInputStream(appContextFile);
-			   String jsonContent = IOUtils.toString(inStream, StandardCharsets.UTF_8);
+//			   String jsonContent = IOUtils.toString(inStream, StandardCharsets.UTF_8);
+			   response = IOUtils.toString(inStream, StandardCharsets.UTF_8);
+
+			    
+			   // 
+			   /*
 			   appContext = new JSONArray(jsonContent) ;
 	       
 			   System.out.println("-----APP Contextt --");
@@ -347,28 +353,33 @@ public class HomeController {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+			   
+			   */
      	   }
      	  catch (FileNotFoundException e) {
 				e.printStackTrace();
+				JSONObject response_err = new JSONObject();
+				response_err.put("Exception", "Invalid appContex : record with given appContext id was not found ");
+				return response_err.toString() ;
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
      	  
   	   }
-	   System.out.println("entriii");
-
-			   System.out.println(entries);
+//	   System.out.println("entriii");
+//
+//			   System.out.println(entries);
 	  
 	  
 	
 		// print result
 		
 		
-		
+		return response;
 		
 
 	   	 
-	   return entries.toString();
+	   //return entries.toString();
 	   
   }
   
@@ -626,10 +637,10 @@ public class HomeController {
       Map<String, Object> orders = oMapper.convertValue(context.get("orders") , Map.class);
 //		      System.out.println(context);
       if(context.containsKey("patientId")) {
-    	  appData.put("patientId", (String) context.get("patientId"));
+    	  appData.put("patientId",  context.get("patientId").toString());
       }
       if(context.containsKey("userId")) {
-    	  appData.put("Practitioner", (String) context.get("userId"));
+    	  appData.put("Practitioner", context.get("userId").toString());
       }
       String hook = "";
       if(inputjson.containsKey("hook")) {
