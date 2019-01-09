@@ -404,10 +404,8 @@ public class HomeController {
       JSONObject reqJson = new JSONObject();
       JSONObject patientFhir = new JSONObject();
       try {
-    	  file = ResourceUtils.getFile("classpath:config/data.json");
-		  InputStream in = new FileInputStream(file);
-		  String jsonTxt = IOUtils.toString(in, StandardCharsets.UTF_8);
-		  JSONObject configData = new JSONObject(jsonTxt);
+    	  
+		  JSONObject configData = this.getConfigData();
 		  
 //		  System.out.println("configData:\n"+ configData.get("hook_cql_map"));
 		  String hook  = (String) inputjson.get("hook");
@@ -428,12 +426,7 @@ public class HomeController {
       }
       catch(JSONException json_ex) {
     	  System.out.println(json_ex.getStackTrace());
-      } catch (FileNotFoundException e) {
-		e.printStackTrace();
-	  } catch (IOException e) {
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	}
+      }
       CloseableHttpClient client = HttpClients.createDefault();
       // Get the token and drop the "Bearer"
   /*//GEtting Token -------------    
@@ -899,6 +892,16 @@ public class HomeController {
 	  final String authorization = headers.get("authorization");
 	  JSONObject tokenResponse = this.verifiyToken(authorization);
 	  System.out.println(tokenResponse);
+	  try {
+		  if(!inputjson.containsKey("fhirServer")) {
+	     	 throw new RequestIncompleteException("Parameter Missing : key 'fhirServer' is missing in given request");	    
+		  }
+	  }
+	  catch(RequestIncompleteException req_exception) {
+  	  	JSONObject errorObj = new JSONObject();
+  	  	errorObj.put("exception", req_exception.getMessage());
+	 		return errorObj.toString();
+	 	}
 	  if(tokenResponse.get("type") == "exception") {
 		  return tokenResponse.toString();
 	  }
@@ -934,7 +937,7 @@ public class HomeController {
 			  System.out.println("inputjson.containsKey(");
 			  System.out.println(inputjson.containsKey("patientId"));
 			  if(inputjson.containsKey("patientId")) {
-				  resource= this.getResourceById("Patient",(String) inputjson.get("patientId"),authorization);
+				  resource= this.getResourceById("Patient",(String) inputjson.get("patientId"),authorization,inputjson.get("fhirServer").toString());
 			  }
 			  
 		  }
@@ -1051,10 +1054,10 @@ public class HomeController {
 	  
   }
 		    
-  public JSONObject getResourceById(String resourceName,String resourceId,String authorization) {
+  public JSONObject getResourceById(String resourceName,String resourceId,String authorization,String server_url) {
 	  JSONObject response = new JSONObject();
 	  StringBuilder sb = new StringBuilder();
-	  String urlString = "http://54.227.173.76:8181/fhir/baseDstu3/"+resourceName+"/"+resourceId;
+	  String urlString = server_url+resourceName+"/"+resourceId;
       
 //      String urlString = "http://hapi.fhir.org/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
       
