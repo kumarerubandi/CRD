@@ -889,7 +889,32 @@ public class HomeController {
 	consumes = "application/json", produces = "application/json")
   @ResponseBody
   public String patient_view(@RequestBody Map<String, Object> inputjson,@RequestHeader Map<String,String> headers) {
-	  final String authorization = headers.get("authorization");
+	  ObjectMapper oMapper = new ObjectMapper();
+	  String authorization  = "";
+	  Map<String, Object>  fhirAuth ;
+	  try {
+		  if(!inputjson.containsKey("fhirAuthorization")) {
+			  throw new RequestIncompleteException("FHIR Authorization details are missing !!");
+		  }
+		  fhirAuth = oMapper.convertValue(inputjson.get("fhirAuthorization") , Map.class);
+
+		  if(!fhirAuth.containsKey("access_token")) {
+			 throw new RequestIncompleteException("FHIR access token is missing !!");
+		  }
+		  authorization = "Bearer "+fhirAuth.get("access_token");
+	   }
+	  catch(RequestIncompleteException req_exception) {
+		  JSONObject errorObj = new JSONObject();
+	  	  errorObj.put("exception", req_exception.getMessage());
+	 	  return errorObj.toString();
+	 	}
+
+	  catch (Exception exception) {
+	        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
+	        exception.printStackTrace();
+	    }
+	    
+	  
 	  JSONObject tokenResponse = this.verifiyToken(authorization);
 	  System.out.println(tokenResponse);
 	  try {
@@ -911,7 +936,7 @@ public class HomeController {
 		  JSONObject singleCard = new JSONObject();
 		  JSONObject resource=new JSONObject();
 		  boolean getPatient = false;
-		  ObjectMapper oMapper = new ObjectMapper();
+		  
 		  System.out.println("Prefetch0:"+inputjson.get("prefetch")!=null);
 		  if(inputjson.containsKey("prefetch")) {
 			  String prefetchJson = "";
