@@ -264,7 +264,7 @@ public class HomeController {
 							JSONObject keyObj = oMapper.convertValue(fieldMapper.get(key) , JSONObject.class);
 							if((boolean) keyObj.get("has_patient_field")) {
 								System.out.println("Has patient field : "+key);
-								finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?"+(String)keyObj.get("code_field")+"="+code+"&patient="+appData.get("patientId");
+								finalUrl = "http://18.222.7.99:8181/fhir/baseDstu3/"+key+"?"+(String)keyObj.get("code_field")+"="+code+"&patient="+appData.get("patientId");
 							    	
 							}
 							else {
@@ -279,14 +279,14 @@ public class HomeController {
 								   			String fieldId = mappingField.substring(((String)  keyObj.get("string")+"/").length()).trim();
 								   			System.out.println("Field Id");
 								   			System.out.println(fieldId);
-								   			finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?"+(String)keyObj.get("code_field")+"="+code+"&"+(String) keyObj.get("key")+"="+fieldId;
+								   			finalUrl = "http://18.222.7.99:8181/fhir/baseDstu3/"+key+"?"+(String)keyObj.get("code_field")+"="+code+"&"+(String) keyObj.get("key")+"="+fieldId;
 							   			}
 						   			}
 					   			}
 							}
 						}
 						else {
-						       finalUrl = "http://54.227.173.76:8181/fhir/baseDstu3/"+key+"?patient="+appData.get("patientId")+"&code="+code;
+						       finalUrl = "http://18.222.7.99:8181/fhir/baseDstu3/"+key+"?patient="+appData.get("patientId")+"&code="+code;
 						} 
 
 				        if(finalUrl != "") {
@@ -414,10 +414,23 @@ public class HomeController {
 		  List<String> hookList = oMapper.convertValue(hookMap.get(hook) , List.class);
 		  
 		  
+	   List<Object> entryArray = oMapper.convertValue(orders.get("entry") , List.class);
+		  if(context.containsKey("patientId")) {
+			  String patString = " {\n" + 
+				  		"    		  resource:{\n" + 
+				  		"    		  resourceType:\"Patient\",\n" + 
+				  		"    		  id:"+context.get("patientId").toString()+"\n" + 
+				  		"    		  }\n" + 
+				  		"    		  }";
+			  JSONObject patientResObj = new JSONObject(patString);
+			  entryArray.add(patientResObj);
+			  
+		  }
+
     	  patientFhir.put("resourceType","Bundle");
     	  patientFhir.put("id",context.get("patientId"));
     	  patientFhir.put("type","collection");
-    	  patientFhir.put("entry",orders.get("entry"));
+    	  patientFhir.put("entry",entryArray);
     	  reqJson.put("cql",hookList.get(0));
     	  reqJson.put("patientFhir",patientFhir);
 //    	  System.out.println("reqqjson -----\n");
@@ -453,7 +466,7 @@ public class HomeController {
 //      Object[] req_context = inputjson.get;
       
       String clientId = "app-login";
-      HttpPost httpPost = new HttpPost("https://54.227.173.76:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token");
+      HttpPost httpPost = new HttpPost("https://18.222.7.99:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token");
       List<NameValuePair> params = new ArrayList<NameValuePair>();
       params.add(new BasicNameValuePair("client_id", clientId));
       params.add(new BasicNameValuePair("username",username));
@@ -496,16 +509,16 @@ public class HomeController {
 	        System.out.println(token);
 	          
 	       }
-	       else {
-		       
-	    	   throw new RequestIncompleteException("No valid authorization header was found");	       
-	       }
+//	       else {
+//		       
+//	    	   throw new RequestIncompleteException("No valid authorization header was found");	       
+//	       }
       }
-      catch(RequestIncompleteException req_exception) {
-    	  	JSONObject errorObj = new JSONObject();
-    	  	errorObj.put("exception", req_exception.getMessage());
-	 		return errorObj.toString();
-	 	}
+//      catch(RequestIncompleteException req_exception) {
+//    	  	JSONObject errorObj = new JSONObject();
+//    	  	errorObj.put("exception", req_exception.getMessage());
+//	 		return errorObj.toString();
+//	 	}
       catch (Exception exception) {
 	        System.out.println("388 EXceptionnnnnn");
 	        exception.printStackTrace();
@@ -513,7 +526,7 @@ public class HomeController {
       
       String client_Id = "app-token";
       String client_secret = "237b167a-c4d0-4861-856d-6decf5426022";
-      HttpPost httpPost = new HttpPost("https://54.227.173.76:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token/introspect");
+      HttpPost httpPost = new HttpPost("https://18.222.7.99:8443/auth/realms/ProviderCredentials/protocol/openid-connect/token/introspect");
       List<NameValuePair> params = new ArrayList<NameValuePair>();
       params.add(new BasicNameValuePair("client_id", client_Id));
       params.add(new BasicNameValuePair("client_secret", client_secret));
@@ -524,28 +537,28 @@ public class HomeController {
         e.printStackTrace();
       }
       
-      JsonObject tokenResponse;
-      try {
-        CloseableHttpResponse response = client.execute(httpPost);
-        String jsonStr = EntityUtils.toString(response.getEntity());
-        tokenResponse = new JsonParser().parse(jsonStr).getAsJsonObject();      
-        client.close();
-      }
-      catch (IOException e) {
-        System.out.println("412\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
-        e.printStackTrace();
-        tokenResponse = null;
-      }
+      JsonObject tokenResponse = null;
+      if(authorization != null) {
+	      try {
+	        CloseableHttpResponse response = client.execute(httpPost);
+	        String jsonStr = EntityUtils.toString(response.getEntity());
+	        tokenResponse = new JsonParser().parse(jsonStr).getAsJsonObject();      
+	        client.close();
+	      }
+	      catch (IOException e) {
+	        System.out.println("412\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
+	        e.printStackTrace();
+	        tokenResponse = null;
+	      }
+  	  }
       
      
       StringBuilder sb = new StringBuilder();
       JSONObject responseObj = new JSONObject();
-      System.out.println("Tokeken ress");
 
-      System.out.println(tokenResponse);
       
       try {
-      	if ((tokenResponse != null) && (tokenResponse.get("active").getAsBoolean())) {
+      	if (authorization == null || ((tokenResponse != null) && (tokenResponse.get("active").getAsBoolean()))) {
       	
       		
 	        // execute method and handle any error responses.
@@ -564,9 +577,9 @@ public class HomeController {
 	        	conn.setRequestProperty("Authorization",authorization);
 	          
 	        }
-	        else {
-	        	throw new RequestIncompleteException("Unable to call CDS . token doesn't exist");
-	        }
+//	        else {
+//	        	throw new RequestIncompleteException("Unable to call CDS . token doesn't exist");
+//	        }
 	        
 	        conn.setDoOutput(true);
 	        conn.getOutputStream().write(postDataBytes);
@@ -582,16 +595,16 @@ public class HomeController {
 	        }
 	        
 		 }
-      	else {
-      		
-        	throw new RequestIncompleteException("Invalid Oauth Token");
-        }
+//      	else {
+//      		
+//        	throw new RequestIncompleteException("Invalid Oauth Token");
+//        }
        }
-	 catch(RequestIncompleteException req_exception) {
-		 	JSONObject errorObj = new JSONObject();
- 	  		errorObj.put("exception", req_exception.getMessage());
-	 		return errorObj.toString();
-	 	}
+//	 catch(RequestIncompleteException req_exception) {
+//		 	JSONObject errorObj = new JSONObject();
+// 	  		errorObj.put("exception", req_exception.getMessage());
+//	 		return errorObj.toString();
+//	 	}
 	 catch (Exception exception) {
 	        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
 	        exception.printStackTrace();
@@ -639,6 +652,12 @@ public class HomeController {
       }
       if(context.containsKey("userId")) {
     	  appData.put("Practitioner", context.get("userId").toString());
+      } 
+      if(context.containsKey("encounterId")) {
+    	  appData.put("Encounter", context.get("encounterId").toString());
+      }
+      if(context.containsKey("converageId")) {
+    	  appData.put("Coverage", context.get("converageId").toString());
       }
       String hook = "";
       if(inputjson.containsKey("hook")) {
@@ -660,12 +679,25 @@ public class HomeController {
 //		  System.out.println("configData:\n"+ configData.get("hook_cql_map"));
 		  
 		  JSONObject hookMap = oMapper.convertValue(configData.get("hook_cql_map") , JSONObject.class);
-//		  System.out.println(hookMap);
+		  System.out.println(hookMap);
 		  List<String> hookList = oMapper.convertValue(hookMap.get(hook) , List.class);
+	 List<Object> entryArray = oMapper.convertValue(orders.get("entry") , List.class);
+		  if(context.containsKey("patientId")) {
+			  String patString = " {\n" + 
+				  		"    		  resource:{\n" + 
+				  		"    		  resourceType:\"Patient\",\n" + 
+				  		"    		  id:"+context.get("patientId").toString()+"\n" + 
+				  		"    		  }\n" + 
+				  		"    		  }";
+			  JSONObject patientResObj = new JSONObject(patString);
+			  entryArray.add(patientResObj);
+			  
+		  }
     	  patientFhir.put("resourceType","Bundle");
     	  patientFhir.put("id",context.get("patientId"));
     	  patientFhir.put("type","collection");
-    	  patientFhir.put("entry",orders.get("entry"));
+    	  patientFhir.put("entry",entryArray);
+	 
     	  reqJson.put("cql",hookList.get(0));
     	  reqJson.put("patientFhir",patientFhir);
     	  System.out.println("reqquirejson -----\n");
@@ -673,7 +705,7 @@ public class HomeController {
       
       }
       catch(JSONException json_ex) {
-    	  System.out.println(json_ex.getStackTrace());
+    	 json_ex.printStackTrace();
       } 
       catch (FileNotFoundException e) {
 		e.printStackTrace();
@@ -693,16 +725,16 @@ public class HomeController {
 	        System.out.println(token);
 	          
 	       }
-	       else {
-		       
-	    	   throw new RequestIncompleteException("No valid authorization header was found");	       
-	       }
+//	       else {
+//		       
+//	    	   throw new RequestIncompleteException("No valid authorization header was found");	       
+//	       }
       }
-      catch(RequestIncompleteException req_exception) {
-    	  	JSONObject errorObj = new JSONObject();
-    	  	errorObj.put("exception", req_exception.getMessage());
-	 		return errorObj.toString();
-	 	}
+//      catch(RequestIncompleteException req_exception) {
+//    	  	JSONObject errorObj = new JSONObject();
+//    	  	errorObj.put("exception", req_exception.getMessage());
+//	 		return errorObj.toString();
+//	 	}
       catch (Exception exception) {
 	        System.out.println("388 EXceptionnnnnn");
 	        exception.printStackTrace();
@@ -710,7 +742,7 @@ public class HomeController {
       
       String client_Id = "app-token";
       String client_secret = "237b167a-c4d0-4861-856d-6decf5426022";
-      HttpPost httpPost = new HttpPost("https://54.227.173.76:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token/introspect");
+      HttpPost httpPost = new HttpPost("https://18.222.7.99:8443/auth/realms/ProviderCredentials/protocol/openid-connect/token/introspect");
       List<NameValuePair> params = new ArrayList<NameValuePair>();
       params.add(new BasicNameValuePair("client_id", client_Id));
       params.add(new BasicNameValuePair("client_secret", client_secret));
@@ -721,28 +753,29 @@ public class HomeController {
         e.printStackTrace();
       }
       
-      JsonObject tokenResponse;
-      try {
-        CloseableHttpResponse response = client.execute(httpPost);
-        String jsonStr = EntityUtils.toString(response.getEntity());
-        System.out.println("------Get jsosoosn responsee------");
-        System.out.println(jsonStr);
-        tokenResponse = new JsonParser().parse(jsonStr).getAsJsonObject();      
-        client.close();
+      JsonObject tokenResponse = null;
+      if(authorization != null) {
+	      try {
+	        CloseableHttpResponse response = client.execute(httpPost);
+	        String jsonStr = EntityUtils.toString(response.getEntity());
+	        System.out.println("------Get jsosoosn responsee------");
+	        System.out.println(jsonStr);
+	        tokenResponse = new JsonParser().parse(jsonStr).getAsJsonObject();      
+	        client.close();
+	      }
+	      catch (IOException e) {
+	        System.out.println("412\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
+	        e.printStackTrace();
+	        tokenResponse = null;
+	      }
       }
-      catch (IOException e) {
-        System.out.println("412\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
-        e.printStackTrace();
-        tokenResponse = null;
-      }
-      
       
     
       StringBuilder sb = new StringBuilder();
       JSONObject response = new JSONObject();
       try{
 	 
-    	if ((tokenResponse != null) && (tokenResponse.get("active").getAsBoolean())) {
+    	if (authorization == null || ((tokenResponse != null) && (tokenResponse.get("active").getAsBoolean()))) {
     	      	
         
 	        // execute method and handle any error responses.
@@ -757,8 +790,9 @@ public class HomeController {
 	        conn.setRequestMethod("POST");
 	        conn.setRequestProperty("Content-Type", "application/json");
 	        conn.setRequestProperty("Accept","application/json");
-	        conn.setRequestProperty("Authorization",authorization);
-	        conn.setDoOutput(true);
+	       if(authorization!= null) {
+		 conn.setRequestProperty("Authorization",authorization);
+	      }  conn.setDoOutput(true);
 	        conn.getOutputStream().write(postDataBytes);
 	        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
 	        String line =null;
@@ -768,7 +802,7 @@ public class HomeController {
 	        String basePathOfClass = getClass().getProtectionDomain().getCodeSource().getLocation().getFile();
 	        System.out.println("---crd path---");
 	       
-	        
+		System.out.println(sb.toString());	        
 	        JSONObject jsonObj = new JSONObject(sb.toString());
 	        jsonObj.put("appData", appData);
 	        jsonObj.put("hook", hook);
@@ -777,6 +811,7 @@ public class HomeController {
 	        String[] splitPath = basePathOfClass.split("server/build/classes/java/main/");
 	        System.out.println(splitPath.length > 1);
 	        System.out.println(splitPath.length + "  " + basePathOfClass.split("server/build/classes/").length );
+	        System.out.println(jsonObj);
 	        boolean fileCreated = false;
 	        String filename = "";
 	        if(splitPath.length == 1) {
@@ -822,8 +857,8 @@ public class HomeController {
 	        }
 	        applink.put("url",appLinkURL+"launch?launch="+filename.replace(".json", "")+"&iss="+inputjson.get("fhirServer").toString());
 	        applink.put("type","smart");
-//	        applink.put("appContext",jsonObj.get("requirements"));
-	        applink.put("appContext", filename.replace(".json", ""));
+	        applink.put("appContext",jsonObj.get("requirements"));
+//	        applink.put("appContext", filename.replace(".json", ""));
 	        links.add(applink);
 	        
 	        JSONObject sourceJson = new JSONObject();
@@ -899,23 +934,29 @@ public class HomeController {
 		  fhirAuth = oMapper.convertValue(inputjson.get("fhirAuthorization") , Map.class);
 
 		  if(!fhirAuth.containsKey("access_token")) {
-			 throw new RequestIncompleteException("FHIR access token is missing !!");
+//			 throw new RequestIncompleteException("FHIR access token is missing !!");
+			  
 		  }
-		  authorization = "Bearer "+fhirAuth.get("access_token");
+		  else {
+			  authorization = "Bearer "+fhirAuth.get("access_token");
+		  }
+		  
 	   }
-	  catch(RequestIncompleteException req_exception) {
-		  JSONObject errorObj = new JSONObject();
-	  	  errorObj.put("exception", req_exception.getMessage());
-	 	  return errorObj.toString();
-	 	}
+//	  catch(RequestIncompleteException req_exception) {
+//		  JSONObject errorObj = new JSONObject();
+//	  	  errorObj.put("exception", req_exception.getMessage());
+//	 	  return errorObj.toString();
+//	 	}
 
 	  catch (Exception exception) {
 	        System.out.println("\n\n\\n\n\n\\n\n\n\n\nEXceptionnnnnn");
 	        exception.printStackTrace();
 	    }
-	    
+	  JSONObject tokenResponse = null;
+	  if(!authorization.equals("")) {
+		  tokenResponse = this.verifiyToken(authorization);
+	  }
 	  
-	  JSONObject tokenResponse = this.verifiyToken(authorization);
 	  System.out.println(tokenResponse);
 	  try {
 		  if(!inputjson.containsKey("fhirServer")) {
@@ -931,7 +972,7 @@ public class HomeController {
 		  return tokenResponse.toString();
 	  }
 	  JSONObject response = new JSONObject();
-	  if((boolean)tokenResponse.get("active")) {
+	  if(!authorization.equals("") || (tokenResponse != null && (boolean)tokenResponse.get("active"))) {
 		  ArrayList<JSONObject> cards = new ArrayList<JSONObject>();
 		  JSONObject singleCard = new JSONObject();
 		  JSONObject resource=new JSONObject();
@@ -1050,7 +1091,7 @@ public class HomeController {
 	      
 	    String client_Id = "app-token";
 	    String client_secret = "237b167a-c4d0-4861-856d-6decf5426022";
-	    HttpPost httpPost = new HttpPost("https://54.227.173.76:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token/introspect");
+	    HttpPost httpPost = new HttpPost("https://18.222.7.99:8443/auth/realms/ProviderCredentials/protocol/openid-connect/token/introspect");
 	    List<NameValuePair> params = new ArrayList<NameValuePair>();
 	    params.add(new BasicNameValuePair("client_id", client_Id));
 	    params.add(new BasicNameValuePair("client_secret", client_secret));
@@ -1164,7 +1205,7 @@ public class HomeController {
 	      
 	    String client_Id = "app-token";
 	    String client_secret = "237b167a-c4d0-4861-856d-6decf5426022";
-	    HttpPost httpPost = new HttpPost("https://54.227.173.76:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token/introspect");
+	    HttpPost httpPost = new HttpPost("https://18.222.7.99:8443/auth/realms/ProviderCredentials/protocol/openid-connect/token/introspect");
 	    List<NameValuePair> params = new ArrayList<NameValuePair>();
 	    params.add(new BasicNameValuePair("client_id", client_Id));
 	    params.add(new BasicNameValuePair("client_secret", client_secret));
@@ -1195,7 +1236,7 @@ public class HomeController {
 				
 				inputjson.forEach((resource,id)->{
 					JSONObject resourceObj = new JSONObject();
-					String urlString = "http://54.227.173.76:8181/fhir/baseDstu3/"+resource+"/"+id;
+					String urlString = "http://18.222.7.99:8181/fhir/baseDstu3/"+resource+"/"+id;
 				       
 //				       String urlString = "http://hapi.fhir.org/baseDstu3/"+key+"?patient="+inputjson.get("patientId")+"&code="+code;
 					CloseableHttpClient httpClient = HttpClients.createDefault();
@@ -1310,7 +1351,7 @@ public class HomeController {
 	      
 	      String client_Id = "app-token";
 	      String client_secret = "237b167a-c4d0-4861-856d-6decf5426022";
-	      HttpPost httpPost = new HttpPost("https://54.227.173.76:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token/introspect");
+	      HttpPost httpPost = new HttpPost("https://18.222.7.99:8443/auth/realms/ClientFhirServer/protocol/openid-connect/token/introspect");
 	      List<NameValuePair> params = new ArrayList<NameValuePair>();
 	      params.add(new BasicNameValuePair("client_id", client_Id));
 	      params.add(new BasicNameValuePair("client_secret", client_secret));
