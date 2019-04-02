@@ -681,7 +681,7 @@ public class HomeController {
 		  JSONObject hookMap = oMapper.convertValue(configData.get("hook_cql_map") , JSONObject.class);
 		  System.out.println(hookMap);
 		  List<String> hookList = oMapper.convertValue(hookMap.get(hook) , List.class);
-	 List<Object> entryArray = oMapper.convertValue(orders.get("entry") , List.class);
+		  List<Object> entryArray = oMapper.convertValue(orders.get("entry") , List.class);
 		  if(context.containsKey("patientId")) {
 			  String patString = " {\n" + 
 				  		"    		  resource:{\n" + 
@@ -806,6 +806,9 @@ public class HomeController {
 	        JSONObject jsonObj = new JSONObject(sb.toString());
 	        jsonObj.put("appData", appData);
 	        jsonObj.put("hook", hook);
+	        if(inputjson.containsKey("payerName")) {
+	        	jsonObj.put("payerName", (String) inputjson.get("payerName"));
+	        }
 	        JSONArray appContext = new JSONArray();
 	        appContext.put(jsonObj);
 	        String[] splitPath = basePathOfClass.split("server/build/classes/java/main/");
