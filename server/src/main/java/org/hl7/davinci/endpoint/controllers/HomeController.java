@@ -525,7 +525,7 @@ public class HomeController {
 	    }
       
       String client_Id = "app-token";
-      String client_secret = "237b167a-c4d0-4861-856d-6decf5426022";
+      String client_secret = "48bf2c3e-2bd6-4f8d-a5ce-2f94adcb7492";
       HttpPost httpPost = new HttpPost("https://18.222.7.99:8443/auth/realms/ProviderCredentials/protocol/openid-connect/token/introspect");
       List<NameValuePair> params = new ArrayList<NameValuePair>();
       params.add(new BasicNameValuePair("client_id", client_Id));
@@ -741,7 +741,7 @@ public class HomeController {
 	    }
       
       String client_Id = "app-token";
-      String client_secret = "237b167a-c4d0-4861-856d-6decf5426022";
+      String client_secret = "48bf2c3e-2bd6-4f8d-a5ce-2f94adcb7492";
       HttpPost httpPost = new HttpPost("https://18.222.7.99:8443/auth/realms/ProviderCredentials/protocol/openid-connect/token/introspect");
       List<NameValuePair> params = new ArrayList<NameValuePair>();
       params.add(new BasicNameValuePair("client_id", client_Id));
@@ -1093,7 +1093,7 @@ public class HomeController {
 	    }
 	      
 	    String client_Id = "app-token";
-	    String client_secret = "237b167a-c4d0-4861-856d-6decf5426022";
+	    String client_secret = "48bf2c3e-2bd6-4f8d-a5ce-2f94adcb7492";
 	    HttpPost httpPost = new HttpPost("https://18.222.7.99:8443/auth/realms/ProviderCredentials/protocol/openid-connect/token/introspect");
 	    List<NameValuePair> params = new ArrayList<NameValuePair>();
 	    params.add(new BasicNameValuePair("client_id", client_Id));
@@ -1207,7 +1207,7 @@ public class HomeController {
 	    }
 	      
 	    String client_Id = "app-token";
-	    String client_secret = "237b167a-c4d0-4861-856d-6decf5426022";
+	    String client_secret = "48bf2c3e-2bd6-4f8d-a5ce-2f94adcb7492";
 	    HttpPost httpPost = new HttpPost("https://18.222.7.99:8443/auth/realms/ProviderCredentials/protocol/openid-connect/token/introspect");
 	    List<NameValuePair> params = new ArrayList<NameValuePair>();
 	    params.add(new BasicNameValuePair("client_id", client_Id));
